@@ -1,0 +1,382 @@
+<Window x:Class="VacuumDryer.UI.Views.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="真空乾燥機控制系統 - VCD" 
+        Height="768" Width="1280"
+        WindowStartupLocation="CenterScreen"
+        Background="#E8E8E8">
+    
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="60"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="30"/>
+        </Grid.RowDefinitions>
+        
+        <!-- 頂部標題列 (綠色) -->
+        <Border Grid.Row="0" Background="#4CAF50">
+            <Grid Margin="10,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                
+                <!-- Logo 與公司名稱 -->
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <Border Background="White" CornerRadius="5" Padding="8,4" Margin="0,0,10,0">
+                        <TextBlock Text="USUN" FontSize="16" FontWeight="Bold" Foreground="#4CAF50"/>
+                    </Border>
+                    <StackPanel>
+                        <TextBlock Text="暘程科技股份有限公司" FontSize="18" Foreground="White" FontWeight="Bold"/>
+                        <TextBlock Text="USUN TECHNOLOGY CO., LTD." FontSize="10" Foreground="White"/>
+                    </StackPanel>
+                </StackPanel>
+                
+                <!-- 機台狀態 (橘黃色區塊) -->
+                <Border Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center"
+                        Background="#FFB300" CornerRadius="5" Padding="30,8">
+                    <TextBlock x:Name="MachineStatus" Text="手動待機中" 
+                               FontSize="22" FontWeight="Bold" Foreground="#333"/>
+                </Border>
+                
+                <!-- 使用者與模式 -->
+                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="20,0">
+                    <TextBlock Text="Operator" Foreground="White" FontSize="12" VerticalAlignment="Center"/>
+                    <TextBlock x:Name="UserLevel" Text="  0" Foreground="White" FontSize="12" 
+                               FontWeight="Bold" VerticalAlignment="Center" Margin="5,0,20,0"/>
+                    
+                    <Border Background="#90A4AE" CornerRadius="3" Padding="10,5" Margin="2,0">
+                        <TextBlock x:Name="ManualModeText" Text="手動" Foreground="White" FontSize="12"/>
+                    </Border>
+                    <Border x:Name="AutoModeBorder" Background="#4CAF50" CornerRadius="3" Padding="10,5" Margin="2,0">
+                        <TextBlock Text="自動" Foreground="White" FontSize="12"/>
+                    </Border>
+                </StackPanel>
+                
+                <!-- 參數按鈕 -->
+                <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button Content="材料參數" Width="80" Height="28" Margin="3,0"
+                            Background="#FFC107" Foreground="#333" BorderThickness="0"/>
+                    <Button Content="機台參數" Width="80" Height="28" Margin="3,0"
+                            Background="#90A4AE" Foreground="White" BorderThickness="0"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+        
+        <!-- 主內容區 -->
+        <Grid Grid.Row="1" Margin="10">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="150"/>
+            </Grid.ColumnDefinitions>
+            
+            <!-- 左側主要區域 -->
+            <Grid Grid.Column="0" Margin="0,0,10,0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                
+                <!-- 分頁標籤 -->
+                <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,5">
+                    <Border x:Name="TabMain" Background="#4CAF50" Padding="15,5" Cursor="Hand"
+                            MouseDown="TabMain_Click">
+                        <TextBlock Text="主頁面" Foreground="White" FontWeight="Bold"/>
+                    </Border>
+                    <Border x:Name="TabChart" Background="#E0E0E0" Padding="15,5" Cursor="Hand"
+                            MouseDown="TabChart_Click">
+                        <TextBlock Text="圖表" Foreground="#333"/>
+                    </Border>
+                    <Border x:Name="TabAlarm" Background="#E0E0E0" Padding="15,5" Cursor="Hand"
+                            MouseDown="TabAlarm_Click">
+                        <TextBlock Text="異常" Foreground="#333"/>
+                    </Border>
+                </StackPanel>
+                
+                <!-- 內容區 -->
+                <Grid Grid.Row="1">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="280"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="180"/>
+                    </Grid.ColumnDefinitions>
+                    
+                    <!-- 左側：流程資訊 + 連線狀態 -->
+                    <Grid Grid.Column="0" Margin="0,0,5,0">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        
+                        <!-- 流程資訊 -->
+                        <GroupBox Grid.Row="0" Header="流程資訊" Padding="5">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="*"/>
+                                </Grid.RowDefinitions>
+                                
+                                <Grid Background="#4CAF50">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="80"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="Time" Foreground="White" FontWeight="Bold" Padding="5,3"/>
+                                    <TextBlock Grid.Column="1" Text="Action" Foreground="White" FontWeight="Bold" Padding="5,3"/>
+                                </Grid>
+                                
+                                <ListBox Grid.Row="1" x:Name="ProcessLog" BorderThickness="1" 
+                                         BorderBrush="#BDBDBD" Background="White">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding}" FontSize="11"/>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+                            </Grid>
+                        </GroupBox>
+                        
+                        <!-- 連線狀態 -->
+                        <GroupBox Grid.Row="1" Header="連線狀態" Padding="5" Height="60">
+                            <StackPanel Orientation="Horizontal">
+                                <Border Background="#E0E0E0" Padding="8,3" Margin="2">
+                                    <TextBlock Text="上控" FontSize="11"/>
+                                </Border>
+                                <Border x:Name="ConnectionStatus" Background="#F44336" Padding="8,3" Margin="2">
+                                    <TextBlock Text="未連線" Foreground="White" FontSize="11"/>
+                                </Border>
+                            </StackPanel>
+                        </GroupBox>
+                    </Grid>
+                    
+                    <!-- 中間：機台示意圖 + 流程步驟 -->
+                    <Border Grid.Column="1" Background="White" BorderBrush="#BDBDBD" BorderThickness="1" Margin="5,0">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+                            
+                            <!-- 流程步驟指示燈 -->
+                            <GroupBox Header="流程步驟" Margin="5" Padding="5">
+                                <UniformGrid Rows="2" Columns="5">
+                                    <Border x:Name="StepCloseChamber" Background="#E0E0E0" 
+                                            Margin="2" Padding="5,3" CornerRadius="3">
+                                        <TextBlock Text="1.關腔" FontSize="11" TextAlignment="Center"/>
+                                    </Border>
+                                    <Border x:Name="StepRoughVacuum" Background="#E0E0E0" 
+                                            Margin="2" Padding="5,3" CornerRadius="3">
+                                        <TextBlock Text="2.粗抽" FontSize="11" TextAlignment="Center"/>
+                                    </Border>
+                                    <Border x:Name="StepHighVacuum1" Background="#E0E0E0" 
+                                            Margin="2" Padding="5,3" CornerRadius="3">
+                                        <TextBlock Text="3.細抽I" FontSize="11" TextAlignment="Center"/>
+                                    </Border>
+                                    <Border x:Name="StepHighVacuum2" Background="#E0E0E0" 
+                                            Margin="2" Padding="5,3" CornerRadius="3">
+                                        <TextBlock Text="4.細抽II" FontSize="11" TextAlignment="Center"/>
+                                    </Border>
+                                    <Border x:Name="StepHighVacuum3" Background="#E0E0E0" 
+                                            Margin="2" Padding="5,3" CornerRadius="3">
+                                        <TextBlock Text="5.細抽III" FontSize="11" TextAlignment="Center"/>
+                                    </Border>
+                                    <Border x:Name="StepHighVacuum4" Background="#E0E0E0" 
+                                            Margin="2" Padding="5,3" CornerRadius="3">
+                                        <TextBlock Text="6.細抽IV" FontSize="11" TextAlignment="Center"/>
+                                    </Border>
+                                    <Border x:Name="StepHighVacuum5" Background="#E0E0E0" 
+                                            Margin="2" Padding="5,3" CornerRadius="3">
+                                        <TextBlock Text="7.細抽V" FontSize="11" TextAlignment="Center"/>
+                                    </Border>
+                                    <Border x:Name="StepHoldPressure" Background="#E0E0E0" 
+                                            Margin="2" Padding="5,3" CornerRadius="3">
+                                        <TextBlock Text="8.持壓" FontSize="11" TextAlignment="Center"/>
+                                    </Border>
+                                    <Border x:Name="StepVacuumBreak" Background="#E0E0E0" 
+                                            Margin="2" Padding="5,3" CornerRadius="3">
+                                        <TextBlock Text="9.破真空" FontSize="11" TextAlignment="Center"/>
+                                    </Border>
+                                    <Border x:Name="StepOpenChamber" Background="#E0E0E0" 
+                                            Margin="2" Padding="5,3" CornerRadius="3">
+                                        <TextBlock Text="10.開腔" FontSize="11" TextAlignment="Center"/>
+                                    </Border>
+                                </UniformGrid>
+                            </GroupBox>
+                            
+                            <!-- 機台示意圖區域 -->
+                            <Canvas Grid.Row="1" x:Name="MachineCanvas">
+                                <!-- Pump -->
+                                <Border Canvas.Left="20" Canvas.Top="100" Background="#90A4AE" 
+                                        Padding="15,10" CornerRadius="3">
+                                    <TextBlock Text="Pump" Foreground="White" FontWeight="Bold"/>
+                                </Border>
+                                
+                                <!-- 蝶閥角度顯示 -->
+                                <StackPanel Canvas.Left="120" Canvas.Top="50">
+                                    <TextBlock Text="蝶閥角度" FontSize="10" Foreground="#666"/>
+                                    <Border Background="#FFEB3B" Padding="10,5" CornerRadius="3">
+                                        <TextBlock x:Name="ValveAngle" Text="0.000" FontFamily="Consolas" 
+                                                   FontSize="14" FontWeight="Bold"/>
+                                    </Border>
+                                </StackPanel>
+                                
+                                <!-- Chamber 位置 -->
+                                <StackPanel Canvas.Left="250" Canvas.Top="180" Orientation="Horizontal">
+                                    <TextBlock Text="Chamber位置" FontSize="11" VerticalAlignment="Center"/>
+                                    <Border Background="#E0E0E0" Padding="15,5" Margin="10,0,0,0">
+                                        <TextBlock x:Name="ChamberPosition" Text="0.000" FontFamily="Consolas" 
+                                                   FontSize="14" FontWeight="Bold"/>
+                                    </Border>
+                                </StackPanel>
+                                
+                                <!-- N2 -->
+                                <TextBlock Canvas.Right="30" Canvas.Top="110" Text="N2" 
+                                           FontSize="16" FontWeight="Bold" Foreground="#666"/>
+                            </Canvas>
+                        </Grid>
+                    </Border>
+                    
+                    <!-- 右側：壓力錶 -->
+                    <Grid Grid.Column="2" Margin="5,0,0,0">
+                        <GroupBox Header="壓力錶" Padding="5">
+                            <StackPanel>
+                                <Grid Margin="0,3">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="70"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="35"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="SMC" VerticalAlignment="Center"/>
+                                    <TextBox Grid.Column="1" Text="0.0" IsReadOnly="True" 
+                                             Background="#E0E0E0" TextAlignment="Right" Padding="3"/>
+                                    <TextBlock Grid.Column="2" Text="Pa" VerticalAlignment="Center" Margin="5,0,0,0"/>
+                                </Grid>
+                                <Grid Margin="0,3">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="70"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="35"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="TPR" VerticalAlignment="Center"/>
+                                    <TextBox Grid.Column="1" Text="0.0" IsReadOnly="True" 
+                                             Background="#E0E0E0" TextAlignment="Right" Padding="3"/>
+                                    <TextBlock Grid.Column="2" Text="Pa" VerticalAlignment="Center" Margin="5,0,0,0"/>
+                                </Grid>
+                                <Grid Margin="0,3">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="70"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="35"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="目前壓力" VerticalAlignment="Center"/>
+                                    <TextBox Grid.Column="1" x:Name="CurrentPressure" Text="0.0" IsReadOnly="True" 
+                                             Background="#E0E0E0" TextAlignment="Right" Padding="3"/>
+                                    <TextBlock Grid.Column="2" Text="Pa" VerticalAlignment="Center" Margin="5,0,0,0"/>
+                                </Grid>
+                                <Grid Margin="0,3">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="70"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="35"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="CDA" VerticalAlignment="Center"/>
+                                    <TextBox Grid.Column="1" Text="0.0000" IsReadOnly="True" 
+                                             Background="#E0E0E0" TextAlignment="Right" Padding="3"/>
+                                    <TextBlock Grid.Column="2" Text="KPa" VerticalAlignment="Center" Margin="5,0,0,0"/>
+                                </Grid>
+                                <Grid Margin="0,3">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="70"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="35"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="N2" VerticalAlignment="Center"/>
+                                    <TextBox Grid.Column="1" Text="0.0000" IsReadOnly="True" 
+                                             Background="#E0E0E0" TextAlignment="Right" Padding="3"/>
+                                    <TextBlock Grid.Column="2" Text="KPa" VerticalAlignment="Center" Margin="5,0,0,0"/>
+                                </Grid>
+                                <Grid Margin="0,3">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="70"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="35"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="持壓閥壓力" VerticalAlignment="Center" FontSize="10"/>
+                                    <TextBox Grid.Column="1" Text="0.0000" IsReadOnly="True" 
+                                             Background="#E0E0E0" TextAlignment="Right" Padding="3"/>
+                                    <TextBlock Grid.Column="2" Text="KPa" VerticalAlignment="Center" Margin="5,0,0,0"/>
+                                </Grid>
+                            </StackPanel>
+                        </GroupBox>
+                    </Grid>
+                </Grid>
+            </Grid>
+            
+            <!-- 右側按鈕面板 -->
+            <StackPanel Grid.Column="1">
+                <!-- 功能按鈕 -->
+                <Button Content="🔓  登入" Height="35" Margin="0,5" HorizontalContentAlignment="Left" Padding="10,0"
+                        Background="#E0E0E0" BorderThickness="1" BorderBrush="#BDBDBD" Click="Login_Click"/>
+                <Button Content="⚙️  設定" Height="35" Margin="0,5" HorizontalContentAlignment="Left" Padding="10,0"
+                        Background="#E0E0E0" BorderThickness="1" BorderBrush="#BDBDBD" Click="Settings_Click"/>
+                <Button Content="🎮  手動" Height="35" Margin="0,5" HorizontalContentAlignment="Left" Padding="10,0"
+                        Background="#E0E0E0" BorderThickness="1" BorderBrush="#BDBDBD" Click="ManualControl_Click"/>
+                <Button Content="📊  紀錄" Height="35" Margin="0,5" HorizontalContentAlignment="Left" Padding="10,0"
+                        Background="#E0E0E0" BorderThickness="1" BorderBrush="#BDBDBD" Click="Records_Click"/>
+                
+                <!-- Substrate ID -->
+                <GroupBox Header="Substrate ID" Margin="0,10,0,5" Padding="3">
+                    <TextBox x:Name="SubstrateId" Height="25" Background="White"/>
+                </GroupBox>
+                
+                <!-- 控制按鈕 -->
+                <Button Height="40" Margin="0,5" Background="#F44336" Foreground="White" 
+                        BorderThickness="0" Click="Home_Click">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="🏠" FontSize="16" Margin="0,0,5,0"/>
+                        <TextBlock Text="原點復歸" FontWeight="Bold"/>
+                    </StackPanel>
+                </Button>
+                
+                <Button x:Name="StartButton" Height="40" Margin="0,5" Background="#E0E0E0" 
+                        BorderThickness="1" BorderBrush="#BDBDBD" Click="Start_Click">
+                    <StackPanel Orientation="Horizontal">
+                        <Ellipse Width="12" Height="12" Fill="#4CAF50" Margin="0,0,8,0"/>
+                        <TextBlock Text="開始" FontWeight="Bold"/>
+                    </StackPanel>
+                </Button>
+                
+                <Button x:Name="PauseButton" Height="40" Margin="0,5" Background="#E0E0E0" 
+                        BorderThickness="1" BorderBrush="#BDBDBD" Click="Pause_Click">
+                    <StackPanel Orientation="Horizontal">
+                        <Ellipse Width="12" Height="12" Fill="#FF9800" Margin="0,0,8,0"/>
+                        <TextBlock Text="暫停" FontWeight="Bold"/>
+                    </StackPanel>
+                </Button>
+                
+                <Button Height="40" Margin="0,15,0,5" Background="#F44336" Foreground="White" 
+                        BorderThickness="0" Click="Exit_Click">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="🚪" FontSize="16" Margin="0,0,5,0"/>
+                        <TextBlock Text="離開" FontWeight="Bold"/>
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+        </Grid>
+        
+        <!-- 狀態列 -->
+        <Border Grid.Row="2" Background="#4CAF50" Padding="10,0">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                
+                <TextBlock x:Name="StatusText" Text="系統就緒" Foreground="White" VerticalAlignment="Center"/>
+                <TextBlock Grid.Column="1" x:Name="TimeText" Foreground="White" VerticalAlignment="Center"/>
+            </Grid>
+        </Border>
+    </Grid>
+</Window>

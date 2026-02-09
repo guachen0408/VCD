@@ -1,0 +1,15 @@
+D:\git\VacuumDryer\VacuumDryer.Core\bin\Debug\net8.0\VacuumDryer.Core.deps.json
+D:\git\VacuumDryer\VacuumDryer.Core\bin\Debug\net8.0\VacuumDryer.Core.dll
+D:\git\VacuumDryer\VacuumDryer.Core\bin\Debug\net8.0\VacuumDryer.Core.pdb
+D:\git\VacuumDryer\VacuumDryer.Core\bin\Debug\net8.0\VacuumDryer.Hardware.dll
+D:\git\VacuumDryer\VacuumDryer.Core\bin\Debug\net8.0\VacuumDryer.Hardware.pdb
+D:\git\VacuumDryer\VacuumDryer.Core\obj\Debug\net8.0\VacuumDryer.Core.csproj.AssemblyReference.cache
+D:\git\VacuumDryer\VacuumDryer.Core\obj\Debug\net8.0\VacuumDryer.Core.GeneratedMSBuildEditorConfig.editorconfig
+D:\git\VacuumDryer\VacuumDryer.Core\obj\Debug\net8.0\VacuumDryer.Core.AssemblyInfoInputs.cache
+D:\git\VacuumDryer\VacuumDryer.Core\obj\Debug\net8.0\VacuumDryer.Core.AssemblyInfo.cs
+D:\git\VacuumDryer\VacuumDryer.Core\obj\Debug\net8.0\VacuumDryer.Core.csproj.CoreCompileInputs.cache
+D:\git\VacuumDryer\VacuumDryer.Core\obj\Debug\net8.0\VacuumDr.26D9F6A5.Up2Date
+D:\git\VacuumDryer\VacuumDryer.Core\obj\Debug\net8.0\VacuumDryer.Core.dll
+D:\git\VacuumDryer\VacuumDryer.Core\obj\Debug\net8.0\refint\VacuumDryer.Core.dll
+D:\git\VacuumDryer\VacuumDryer.Core\obj\Debug\net8.0\VacuumDryer.Core.pdb
+D:\git\VacuumDryer\VacuumDryer.Core\obj\Debug\net8.0\ref\VacuumDryer.Core.dll

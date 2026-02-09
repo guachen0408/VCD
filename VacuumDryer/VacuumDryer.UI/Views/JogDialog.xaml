@@ -1,0 +1,143 @@
+<Window x:Class="VacuumDryer.UI.Views.JogDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="JOG" Height="320" Width="380"
+        WindowStartupLocation="CenterOwner"
+        Background="#E8E8E8" ResizeMode="NoResize">
+    
+    <Grid Margin="10">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="150"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+        
+        <!-- 左側控制區 -->
+        <StackPanel Grid.Column="0">
+            <!-- 模式 -->
+            <GroupBox Header="模式" Padding="5" Margin="0,0,0,5">
+                <ComboBox x:Name="ModeCombo" SelectedIndex="0">
+                    <ComboBoxItem Content="Jog"/>
+                    <ComboBoxItem Content="吋動"/>
+                    <ComboBoxItem Content="連續"/>
+                </ComboBox>
+            </GroupBox>
+            
+            <!-- 速度 -->
+            <GroupBox Header="速度(mm/s)" Padding="5" Margin="0,0,0,5">
+                <TextBox x:Name="SpeedInput" Text="10" TextAlignment="Center"/>
+            </GroupBox>
+            
+            <!-- 移動模式 -->
+            <GroupBox Header="移動模式" Padding="5" Margin="0,0,0,5">
+                <TextBox Text="0.001 mm" TextAlignment="Center" IsReadOnly="True" Background="#E0E0E0"/>
+            </GroupBox>
+            
+            <!-- 距離 -->
+            <GroupBox Header="距離(mm)" Padding="5" Margin="0,0,0,5">
+                <TextBox x:Name="DistanceInput" Text="1" TextAlignment="Center"/>
+            </GroupBox>
+            
+            <!-- 控制按鈕 -->
+            <Button Content="🏠 Home" Height="30" Margin="0,5" 
+                    Background="#E0E0E0" BorderThickness="1" BorderBrush="#BDBDBD"
+                    Click="Home_Click"/>
+            <Button Content="Alm Reset" Height="30" Margin="0,5" 
+                    Background="#E0E0E0" BorderThickness="1" BorderBrush="#BDBDBD"
+                    Click="AlmReset_Click"/>
+            <Button Height="30" Margin="0,5" Background="#F44336" Foreground="White" 
+                    BorderThickness="0" Click="Stop_Click">
+                <StackPanel Orientation="Horizontal">
+                    <Ellipse Width="10" Height="10" Fill="White" Margin="0,0,5,0"/>
+                    <TextBlock Text="Stop"/>
+                </StackPanel>
+            </Button>
+        </StackPanel>
+        
+        <!-- 右側分頁區 -->
+        <Grid Grid.Column="1" Margin="10,0,0,0">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+            
+            <!-- 分頁標籤 -->
+            <StackPanel Orientation="Horizontal">
+                <Border x:Name="TabValve" Background="#4CAF50" Padding="15,5" Cursor="Hand"
+                        MouseDown="TabValve_Click">
+                    <TextBlock Text="蝶閥" Foreground="White" FontWeight="Bold"/>
+                </Border>
+                <Border x:Name="TabChamber" Background="#E0E0E0" Padding="15,5" Cursor="Hand"
+                        MouseDown="TabChamber_Click">
+                    <TextBlock Text="真空腔" Foreground="#333"/>
+                </Border>
+            </StackPanel>
+            
+            <!-- 蝶閥控制 (預設顯示) -->
+            <StackPanel x:Name="ValvePanel" Grid.Row="1" Margin="0,15,0,0">
+                <!-- Valve[P] 目前位置 -->
+                <TextBlock Text="Valve[P]" FontWeight="Bold" Margin="0,0,0,5"/>
+                <Grid Margin="0,0,0,15">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="35"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="35"/>
+                    </Grid.ColumnDefinitions>
+                    
+                    <Button Grid.Column="0" Content="➖" Background="#F44336" Foreground="White" 
+                            BorderThickness="0" FontSize="16" FontWeight="Bold"
+                            Tag="V-" PreviewMouseDown="Jog_MouseDown" PreviewMouseUp="Jog_MouseUp"/>
+                    <Border Grid.Column="1" Background="#FFEB3B" Margin="5,0">
+                        <TextBlock x:Name="ValvePosition" Text="0.000" FontFamily="Consolas" 
+                                   FontSize="16" FontWeight="Bold" TextAlignment="Center" 
+                                   VerticalAlignment="Center"/>
+                    </Border>
+                    <Button Grid.Column="2" Content="➕" Background="#4CAF50" Foreground="White" 
+                            BorderThickness="0" FontSize="16" FontWeight="Bold"
+                            Tag="V+" PreviewMouseDown="Jog_MouseDown" PreviewMouseUp="Jog_MouseUp"/>
+                </Grid>
+                
+                <!-- Off 按鈕 -->
+                <Button Content="⭕ off" Width="60" HorizontalAlignment="Left" Height="25"
+                        Background="#90A4AE" Foreground="White" BorderThickness="0"
+                        Click="ValveOff_Click"/>
+                
+                <!-- Valve[T] 目標位置 -->
+                <TextBlock Text="Valve[T]" FontWeight="Bold" Margin="0,15,0,5"/>
+                <Border Background="#E0E0E0" Padding="10,5">
+                    <TextBlock x:Name="ValveTarget" Text="0.000" FontFamily="Consolas" 
+                               FontSize="16" FontWeight="Bold" TextAlignment="Center"/>
+                </Border>
+            </StackPanel>
+            
+            <!-- 真空腔控制 (隱藏) -->
+            <StackPanel x:Name="ChamberPanel" Grid.Row="1" Margin="0,15,0,0" Visibility="Collapsed">
+                <TextBlock Text="Chamber[P]" FontWeight="Bold" Margin="0,0,0,5"/>
+                <Grid Margin="0,0,0,15">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="35"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="35"/>
+                    </Grid.ColumnDefinitions>
+                    
+                    <Button Grid.Column="0" Content="▼" Background="#F44336" Foreground="White" 
+                            BorderThickness="0" FontSize="16" FontWeight="Bold"
+                            Tag="Z-" PreviewMouseDown="Jog_MouseDown" PreviewMouseUp="Jog_MouseUp"/>
+                    <Border Grid.Column="1" Background="#FFEB3B" Margin="5,0">
+                        <TextBlock x:Name="Z1Position" Text="0.000" FontFamily="Consolas" 
+                                   FontSize="16" FontWeight="Bold" TextAlignment="Center" 
+                                   VerticalAlignment="Center"/>
+                    </Border>
+                    <Button Grid.Column="2" Content="▲" Background="#4CAF50" Foreground="White" 
+                            BorderThickness="0" FontSize="16" FontWeight="Bold"
+                            Tag="Z+" PreviewMouseDown="Jog_MouseDown" PreviewMouseUp="Jog_MouseUp"/>
+                </Grid>
+                
+                <TextBlock Text="Z1/Z2 同步誤差" FontWeight="Bold" Margin="0,10,0,5"/>
+                <Border Background="#E0E0E0" Padding="10,5">
+                    <TextBlock x:Name="SyncError" Text="0.000 mm" FontFamily="Consolas" 
+                               FontSize="14" TextAlignment="Center"/>
+                </Border>
+            </StackPanel>
+        </Grid>
+    </Grid>
+</Window>

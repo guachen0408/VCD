@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <RootNamespace>VacuumDryer.UI</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\VacuumDryer.Core\VacuumDryer.Core.csproj" />
+    <ProjectReference Include="..\VacuumDryer.Hardware\VacuumDryer.Hardware.csproj" />
+  </ItemGroup>
+
+</Project>
