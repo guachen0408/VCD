@@ -3,6 +3,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
+using VacuumDryer.Core.Auth;
 using VacuumDryer.Core.Motion;
 using VacuumDryer.Core.Process;
 using VacuumDryer.Hardware;
@@ -18,6 +19,7 @@ public partial class MainWindow : Window
     private readonly DualZController _controller;
     private readonly VacuumProcessController _processController;
     private readonly DispatcherTimer _updateTimer;
+    private readonly AuthManager _authManager = new();
 
     public MainWindow()
     {
@@ -387,8 +389,20 @@ public partial class MainWindow : Window
     private void Login_Click(object sender, RoutedEventArgs e)
     {
         AddLog("開啟登入介面");
-        MessageBox.Show("登入功能\n\n權限等級:\n• Operator (操作員)\n• Engineer (工程師)\n• Supervisor (廠商)", 
-            "登入", MessageBoxButton.OK, MessageBoxImage.Information);
+        var dialog = new LoginDialog(_authManager) { Owner = this };
+        if (dialog.ShowDialog() == true)
+        {
+            var user = _authManager.CurrentUser!;
+            UserLevel.Text = $"  {(int)user.Role}";
+            AddLog($"使用者 {user.Username} 已登入 (權限: {user.Role})");
+        }
+        
+        // 訂閱登出事件更新 UI
+        _authManager.OnLogout += () => Dispatcher.Invoke(() =>
+        {
+            UserLevel.Text = "  0";
+            AddLog("使用者已登出");
+        });
     }
 
     private void Settings_Click(object sender, RoutedEventArgs e)
