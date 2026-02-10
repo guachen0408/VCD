@@ -1,3 +1,4 @@
+using VacuumDryer.Core.Alarm;
 using VacuumDryer.Core.Motion;
 using VacuumDryer.Core.Process.Engine;
 using VacuumDryer.Hardware;
@@ -11,6 +12,7 @@ namespace VacuumDryer.Core.Process;
 public class VacuumProcessContext : IProcessContext
 {
     private readonly Dictionary<Type, object> _services = new();
+    private readonly AlarmManager _alarmManager = new();
     
     public Dictionary<string, bool> Flags { get; } = new();
     public string CurrentState { get; set; } = "Idle";
@@ -31,6 +33,9 @@ public class VacuumProcessContext : IProcessContext
     
     /// <summary>製程參數</summary>
     public ProcessRecipe Recipe { get; set; } = new();
+    
+    /// <summary>警報管理器</summary>
+    public AlarmManager AlarmManager => _alarmManager;
     
     // ===== 事件 =====
     public event Action<string, string>? OnStateChanged;
@@ -65,6 +70,10 @@ public class VacuumProcessContext : IProcessContext
     
     public void RaiseAlarm(int code, string message)
     {
+        // 透過 AlarmManager 統一管理
+        var severity = code < -110500 ? AlarmSeverity.Critical : AlarmSeverity.Error;
+        _alarmManager.Raise(code, message, severity, CurrentState);
+        
         OnAlarm?.Invoke(code, message);
         Log($"⚠️ 異常 {code}: {message}");
     }
