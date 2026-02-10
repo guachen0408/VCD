@@ -13,8 +13,8 @@
             <RowDefinition Height="30"/>
         </Grid.RowDefinitions>
         
-        <!-- 頂部標題列 (綠色) -->
-        <Border Grid.Row="0" Background="#4CAF50">
+        <!-- 頂部標題列 (綠色 -> 白色) -->
+        <Border Grid.Row="0" Background="White">
             <Grid Margin="10,0">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
@@ -23,15 +23,11 @@
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 
-                <!-- Logo 與公司名稱 -->
+                <!-- Logo -->
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                    <Border Background="White" CornerRadius="5" Padding="8,4" Margin="0,0,10,0">
-                        <TextBlock Text="USUN" FontSize="16" FontWeight="Bold" Foreground="#4CAF50"/>
+                    <Border Background="Transparent" CornerRadius="5" Padding="5" Margin="0,0,10,0">
+                        <Image Source="pack://application:,,,/Images/usun_logo.png" Height="40" VerticalAlignment="Center"/>
                     </Border>
-                    <StackPanel>
-                        <TextBlock Text="暘程科技股份有限公司" FontSize="18" Foreground="White" FontWeight="Bold"/>
-                        <TextBlock Text="USUN TECHNOLOGY CO., LTD." FontSize="10" Foreground="White"/>
-                    </StackPanel>
                 </StackPanel>
                 
                 <!-- 機台狀態 (橘黃色區塊) -->
@@ -43,8 +39,8 @@
                 
                 <!-- 使用者與模式 -->
                 <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="20,0">
-                    <TextBlock Text="Operator" Foreground="White" FontSize="12" VerticalAlignment="Center"/>
-                    <TextBlock x:Name="UserLevel" Text="  0" Foreground="White" FontSize="12" 
+                    <TextBlock Text="Operator" Foreground="#333" FontSize="12" VerticalAlignment="Center"/>
+                    <TextBlock x:Name="UserLevel" Text="  0" Foreground="#333" FontSize="12" 
                                FontWeight="Bold" VerticalAlignment="Center" Margin="5,0,20,0"/>
                     
                     <Border Background="#90A4AE" CornerRadius="3" Padding="10,5" Margin="2,0">
@@ -151,90 +147,139 @@
                         </GroupBox>
                     </Grid>
                     
-                    <!-- 中間：機台示意圖 + 流程步驟 -->
+                    <!-- 中間區域 -->
                     <Border Grid.Column="1" Background="White" BorderBrush="#BDBDBD" BorderThickness="1" Margin="5,0">
                         <Grid>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="*"/>
-                            </Grid.RowDefinitions>
-                            
-                            <!-- 流程步驟指示燈 -->
-                            <GroupBox Header="流程步驟" Margin="5" Padding="5">
-                                <UniformGrid Rows="2" Columns="5">
-                                    <Border x:Name="StepCloseChamber" Background="#E0E0E0" 
-                                            Margin="2" Padding="5,3" CornerRadius="3">
-                                        <TextBlock Text="1.關腔" FontSize="11" TextAlignment="Center"/>
-                                    </Border>
-                                    <Border x:Name="StepRoughVacuum" Background="#E0E0E0" 
-                                            Margin="2" Padding="5,3" CornerRadius="3">
-                                        <TextBlock Text="2.粗抽" FontSize="11" TextAlignment="Center"/>
-                                    </Border>
-                                    <Border x:Name="StepHighVacuum1" Background="#E0E0E0" 
-                                            Margin="2" Padding="5,3" CornerRadius="3">
-                                        <TextBlock Text="3.細抽I" FontSize="11" TextAlignment="Center"/>
-                                    </Border>
-                                    <Border x:Name="StepHighVacuum2" Background="#E0E0E0" 
-                                            Margin="2" Padding="5,3" CornerRadius="3">
-                                        <TextBlock Text="4.細抽II" FontSize="11" TextAlignment="Center"/>
-                                    </Border>
-                                    <Border x:Name="StepHighVacuum3" Background="#E0E0E0" 
-                                            Margin="2" Padding="5,3" CornerRadius="3">
-                                        <TextBlock Text="5.細抽III" FontSize="11" TextAlignment="Center"/>
-                                    </Border>
-                                    <Border x:Name="StepHighVacuum4" Background="#E0E0E0" 
-                                            Margin="2" Padding="5,3" CornerRadius="3">
-                                        <TextBlock Text="6.細抽IV" FontSize="11" TextAlignment="Center"/>
-                                    </Border>
-                                    <Border x:Name="StepHighVacuum5" Background="#E0E0E0" 
-                                            Margin="2" Padding="5,3" CornerRadius="3">
-                                        <TextBlock Text="7.細抽V" FontSize="11" TextAlignment="Center"/>
-                                    </Border>
-                                    <Border x:Name="StepHoldPressure" Background="#E0E0E0" 
-                                            Margin="2" Padding="5,3" CornerRadius="3">
-                                        <TextBlock Text="8.持壓" FontSize="11" TextAlignment="Center"/>
-                                    </Border>
-                                    <Border x:Name="StepVacuumBreak" Background="#E0E0E0" 
-                                            Margin="2" Padding="5,3" CornerRadius="3">
-                                        <TextBlock Text="9.破真空" FontSize="11" TextAlignment="Center"/>
-                                    </Border>
-                                    <Border x:Name="StepOpenChamber" Background="#E0E0E0" 
-                                            Margin="2" Padding="5,3" CornerRadius="3">
-                                        <TextBlock Text="10.開腔" FontSize="11" TextAlignment="Center"/>
-                                    </Border>
-                                </UniformGrid>
-                            </GroupBox>
-                            
-                            <!-- 機台示意圖區域 -->
-                            <Canvas Grid.Row="1" x:Name="MachineCanvas">
-                                <!-- Pump -->
-                                <Border Canvas.Left="20" Canvas.Top="100" Background="#90A4AE" 
-                                        Padding="15,10" CornerRadius="3">
-                                    <TextBlock Text="Pump" Foreground="White" FontWeight="Bold"/>
-                                </Border>
+                            <!-- 主頁面視圖 (機台示意圖 + 流程資訊) -->
+                            <Grid x:Name="MainView" Visibility="Visible">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="*"/>
+                                </Grid.RowDefinitions>
                                 
-                                <!-- 蝶閥角度顯示 -->
-                                <StackPanel Canvas.Left="120" Canvas.Top="50">
-                                    <TextBlock Text="蝶閥角度" FontSize="10" Foreground="#666"/>
-                                    <Border Background="#FFEB3B" Padding="10,5" CornerRadius="3">
-                                        <TextBlock x:Name="ValveAngle" Text="0.000" FontFamily="Consolas" 
-                                                   FontSize="14" FontWeight="Bold"/>
-                                    </Border>
-                                </StackPanel>
+                                <!-- 流程資訊文字 -->
+                                <GroupBox Header="流程資訊" Margin="5" Padding="5">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Margin="5">
+                                            <TextBlock Text="當前步驟:" Foreground="#666"/>
+                                            <TextBlock x:Name="CurrentStepText" Text="待機" FontSize="16" FontWeight="Bold" Margin="0,5"/>
+                                            <TextBlock Text="經過時間:" Foreground="#666" Margin="0,10,0,0"/>
+                                            <TextBlock x:Name="StepTimeText" Text="00:00" FontSize="16" FontWeight="Bold" Margin="0,5"/>
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="1" Margin="5">
+                                            <TextBlock Text="目標壓力:" Foreground="#666"/>
+                                            <TextBlock x:Name="TargetPressureText" Text="-" FontSize="16" FontWeight="Bold" Margin="0,5"/>
+                                            <TextBlock Text="剩餘時間:" Foreground="#666" Margin="0,10,0,0"/>
+                                            <TextBlock x:Name="RemainingTimeText" Text="-" FontSize="16" FontWeight="Bold" Margin="0,5"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </GroupBox>
                                 
-                                <!-- Chamber 位置 -->
-                                <StackPanel Canvas.Left="250" Canvas.Top="180" Orientation="Horizontal">
-                                    <TextBlock Text="Chamber位置" FontSize="11" VerticalAlignment="Center"/>
-                                    <Border Background="#E0E0E0" Padding="15,5" Margin="10,0,0,0">
-                                        <TextBlock x:Name="ChamberPosition" Text="0.000" FontFamily="Consolas" 
-                                                   FontSize="14" FontWeight="Bold"/>
+                                <!-- 機台示意圖區域 -->
+                                <Canvas Grid.Row="1" x:Name="MachineCanvas">
+                                    <!-- Pump -->
+                                    <Border Canvas.Left="20" Canvas.Top="100" Background="#90A4AE" 
+                                            Padding="15,10" CornerRadius="3">
+                                        <TextBlock Text="Pump" Foreground="White" FontWeight="Bold"/>
                                     </Border>
-                                </StackPanel>
+                                    
+                                    <!-- 蝶閥角度顯示 -->
+                                    <StackPanel Canvas.Left="120" Canvas.Top="50">
+                                        <TextBlock Text="蝶閥角度" FontSize="10" Foreground="#666"/>
+                                        <Border Background="#FFEB3B" Padding="10,5" CornerRadius="3">
+                                            <TextBlock x:Name="ValveAngle" Text="0.000" FontFamily="Consolas" 
+                                                       FontSize="14" FontWeight="Bold"/>
+                                        </Border>
+                                    </StackPanel>
+                                    
+                                    <!-- Chamber 位置 -->
+                                    <StackPanel Canvas.Left="250" Canvas.Top="180" Orientation="Horizontal">
+                                        <TextBlock Text="Chamber位置" FontSize="11" VerticalAlignment="Center"/>
+                                        <Border Background="#E0E0E0" Padding="15,5" Margin="10,0,0,0">
+                                            <TextBlock x:Name="ChamberPosition" Text="0.000" FontFamily="Consolas" 
+                                                       FontSize="14" FontWeight="Bold"/>
+                                        </Border>
+                                    </StackPanel>
+                                    
+                                    <!-- N2 -->
+                                    <TextBlock Canvas.Right="30" Canvas.Top="110" Text="N2" 
+                                               FontSize="16" FontWeight="Bold" Foreground="#666"/>
+                                </Canvas>
+                            </Grid>
+
+                            <!-- 圖表視圖 (流程步驟 + 曲線圖) -->
+                            <Grid x:Name="ChartView" Visibility="Hidden">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="*"/>
+                                </Grid.RowDefinitions>
                                 
-                                <!-- N2 -->
-                                <TextBlock Canvas.Right="30" Canvas.Top="110" Text="N2" 
-                                           FontSize="16" FontWeight="Bold" Foreground="#666"/>
-                            </Canvas>
+                                <!-- 流程步驟指示燈 (從主畫面移來) -->
+                                <GroupBox Header="流程步驟" Margin="5" Padding="5">
+                                    <UniformGrid Rows="2" Columns="5">
+                                        <Border x:Name="StepCloseChamber" Background="#E0E0E0" 
+                                                Margin="2" Padding="5,3" CornerRadius="3">
+                                            <TextBlock Text="1.關腔" FontSize="11" TextAlignment="Center"/>
+                                        </Border>
+                                        <Border x:Name="StepRoughVacuum" Background="#E0E0E0" 
+                                                Margin="2" Padding="5,3" CornerRadius="3">
+                                            <TextBlock Text="2.粗抽" FontSize="11" TextAlignment="Center"/>
+                                        </Border>
+                                        <Border x:Name="StepHighVacuum1" Background="#E0E0E0" 
+                                                Margin="2" Padding="5,3" CornerRadius="3">
+                                            <TextBlock Text="3.細抽I" FontSize="11" TextAlignment="Center"/>
+                                        </Border>
+                                        <Border x:Name="StepHighVacuum2" Background="#E0E0E0" 
+                                                Margin="2" Padding="5,3" CornerRadius="3">
+                                            <TextBlock Text="4.細抽II" FontSize="11" TextAlignment="Center"/>
+                                        </Border>
+                                        <Border x:Name="StepHighVacuum3" Background="#E0E0E0" 
+                                                Margin="2" Padding="5,3" CornerRadius="3">
+                                            <TextBlock Text="5.細抽III" FontSize="11" TextAlignment="Center"/>
+                                        </Border>
+                                        <Border x:Name="StepHighVacuum4" Background="#E0E0E0" 
+                                                Margin="2" Padding="5,3" CornerRadius="3">
+                                            <TextBlock Text="6.細抽IV" FontSize="11" TextAlignment="Center"/>
+                                        </Border>
+                                        <Border x:Name="StepHighVacuum5" Background="#E0E0E0" 
+                                                Margin="2" Padding="5,3" CornerRadius="3">
+                                            <TextBlock Text="7.細抽V" FontSize="11" TextAlignment="Center"/>
+                                        </Border>
+                                        <Border x:Name="StepHoldPressure" Background="#E0E0E0" 
+                                                Margin="2" Padding="5,3" CornerRadius="3">
+                                            <TextBlock Text="8.持壓" FontSize="11" TextAlignment="Center"/>
+                                        </Border>
+                                        <Border x:Name="StepVacuumBreak" Background="#E0E0E0" 
+                                                Margin="2" Padding="5,3" CornerRadius="3">
+                                            <TextBlock Text="9.破真空" FontSize="11" TextAlignment="Center"/>
+                                        </Border>
+                                        <Border x:Name="StepOpenChamber" Background="#E0E0E0" 
+                                                Margin="2" Padding="5,3" CornerRadius="3">
+                                            <TextBlock Text="10.開腔" FontSize="11" TextAlignment="Center"/>
+                                        </Border>
+                                    </UniformGrid>
+                                </GroupBox>
+                                
+                                <!-- 曲線圖 placeholder -->
+                                <GroupBox Grid.Row="1" Header="真空壓力曲線" Margin="5">
+                                    <Canvas x:Name="VacuumChartCanvas" Background="#FAFAFA">
+                                        <!-- 網格線 -->
+                                        <Line X1="0" Y1="50" X2="1000" Y2="50" Stroke="#EEE" StrokeThickness="1"/>
+                                        <Line X1="0" Y1="100" X2="1000" Y2="100" Stroke="#EEE" StrokeThickness="1"/>
+                                        <Line X1="0" Y1="150" X2="1000" Y2="150" Stroke="#EEE" StrokeThickness="1"/>
+                                        
+                                        <!-- 示意曲線 -->
+                                        <Polyline Points="0,200 50,180 100,100 150,50 200,20 250,10 300,5 350,5 400,100 450,200" 
+                                                  Stroke="#2196F3" StrokeThickness="2"/>
+                                                  
+                                        <TextBlock Canvas.Left="10" Canvas.Top="10" Text="示意圖 (功能開發中)" Foreground="#999"/>
+                                    </Canvas>
+                                </GroupBox>
+                            </Grid>
                         </Grid>
                     </Border>
                     
@@ -319,8 +364,15 @@
                 <!-- 功能按鈕 -->
                 <Button Content="🔓  登入" Height="35" Margin="0,5" HorizontalContentAlignment="Left" Padding="10,0"
                         Background="#E0E0E0" BorderThickness="1" BorderBrush="#BDBDBD" Click="Login_Click"/>
-                <Button Content="⚙️  設定" Height="35" Margin="0,5" HorizontalContentAlignment="Left" Padding="10,0"
-                        Background="#E0E0E0" BorderThickness="1" BorderBrush="#BDBDBD" Click="Settings_Click"/>
+                <Button x:Name="SettingsButton" Content="⚙️  設定" Height="35" Margin="0,5" HorizontalContentAlignment="Left" Padding="10,0"
+                        Background="#E0E0E0" BorderThickness="1" BorderBrush="#BDBDBD" Click="Settings_Click">
+                    <Button.ContextMenu>
+                        <ContextMenu>
+                            <MenuItem Header="📋 製程參數設定" Click="RecipeSettings_Click"/>
+                            <MenuItem Header="🔧 機台參數設定" Click="MachineSettings_Click"/>
+                        </ContextMenu>
+                    </Button.ContextMenu>
+                </Button>
                 <Button Content="🎮  手動" Height="35" Margin="0,5" HorizontalContentAlignment="Left" Padding="10,0"
                         Background="#E0E0E0" BorderThickness="1" BorderBrush="#BDBDBD" Click="ManualControl_Click"/>
                 <Button Content="📊  紀錄" Height="35" Margin="0,5" HorizontalContentAlignment="Left" Padding="10,0"

@@ -36,19 +36,20 @@ public class ProcessRecipe
     // 細抽五段參數 (起始壓力、持續時間、閥門角度、持壓模式、逾時報警)
     public HighVacuumStageParams[] HighVacuumStages { get; set; } = new HighVacuumStageParams[5]
     {
-        new() { StartPressure = 1000, Duration = 10, ValveAngle = 90, HoldPressure = false, Timeout = 30 },
-        new() { StartPressure = 500,  Duration = 10, ValveAngle = 70, HoldPressure = false, Timeout = 30 },
-        new() { StartPressure = 100,  Duration = 10, ValveAngle = 50, HoldPressure = false, Timeout = 30 },
-        new() { StartPressure = 10,   Duration = 10, ValveAngle = 30, HoldPressure = false, Timeout = 30 },
-        new() { StartPressure = 1,    Duration = 10, ValveAngle = 10, HoldPressure = true,  Timeout = 60 }
+        new() { StartPressure = 1000, TargetPressure = 500,  Duration = 10, ValveAngle = 90, HoldPressure = false, Timeout = 30 },
+        new() { StartPressure = 500,  TargetPressure = 200,  Duration = 10, ValveAngle = 70, HoldPressure = false, Timeout = 30 },
+        new() { StartPressure = 200,  TargetPressure = 100,  Duration = 10, ValveAngle = 50, HoldPressure = false, Timeout = 30 },
+        new() { StartPressure = 100,  TargetPressure = 50,   Duration = 10, ValveAngle = 30, HoldPressure = false, Timeout = 30 },
+        new() { StartPressure = 50,   TargetPressure = 10,   Duration = 10, ValveAngle = 10, HoldPressure = true,  Timeout = 60 }
     };
     
     // 持壓參數
     public int HoldPressureDuration { get; set; } = 30;  // 秒
+    public double HoldPressureTarget { get; set; } = 10;  // Pa
     
     // 破真空參數
-    public int VacuumBreakSmallTimeout { get; set; } = 10;  // 破真空小逾時
-    public int VacuumBreakLargeTimeout { get; set; } = 30;  // 破真空大逾時
+    public int VacuumBreakSmallValveTimeout { get; set; } = 10;  // 破真空小閥逾時
+    public int VacuumBreakTimeout { get; set; } = 30;  // 破真空總逾時
     
     // 龍門位置參數
     public double ChamberOpenPosition { get; set; } = 0;      // 開腔位置
@@ -58,7 +59,8 @@ public class ProcessRecipe
 
 public class HighVacuumStageParams
 {
-    public double StartPressure { get; set; }  // 起始壓力 (Pa)
+    public double StartPressure { get; set; }   // 起始壓力 (Pa)
+    public double TargetPressure { get; set; }  // 目標壓力 (Pa)
     public int Duration { get; set; }           // 持續時間 (秒)
     public double ValveAngle { get; set; }      // 閥門角度 (度)
     public bool HoldPressure { get; set; }      // 持壓模式

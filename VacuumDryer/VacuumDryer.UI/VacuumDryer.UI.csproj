@@ -14,4 +14,8 @@
     <ProjectReference Include="..\VacuumDryer.Hardware\VacuumDryer.Hardware.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Resource Include="Images\**" />
+  </ItemGroup>
+
 </Project>

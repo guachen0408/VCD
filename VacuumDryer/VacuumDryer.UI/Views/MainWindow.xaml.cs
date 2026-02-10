@@ -7,6 +7,8 @@ using VacuumDryer.Core.Motion;
 using VacuumDryer.Core.Process;
 using VacuumDryer.Hardware;
 using VacuumDryer.Hardware.Simulation;
+using System.IO;
+using System.Text.Json;
 
 namespace VacuumDryer.UI.Views;
 
@@ -21,6 +23,8 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         
+        InitStorage();
+        
         // 使用模擬控制卡 (實機時換成 DeltaPciL221MotionCard)
         _motionCard = new SimulatedMotionCard3Axis();
         _motionCard.InitializeAsync().Wait();
@@ -32,6 +36,8 @@ public partial class MainWindow : Window
         _processController.OnStateChanged += ProcessController_OnStateChanged;
         _processController.OnProcessLog += ProcessController_OnProcessLog;
         _processController.OnAlarm += ProcessController_OnAlarm;
+
+        LoadSettings(); // Moved here to avoid NullReferenceException
         
         _updateTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(50) };
         _updateTimer.Tick += UpdateTimer_Tick;
@@ -41,42 +47,7 @@ public partial class MainWindow : Window
         AddLog($"控制卡: {_motionCard.Name}");
     }
 
-    private void UpdateTimer_Tick(object? sender, EventArgs e)
-    {
-        // 軸位置更新
-        ValveAngle.Text = _controller.ValvePosition.ToString("F3");
-        ChamberPosition.Text = _controller.PositionZ1.ToString("F3");
-        
-        // 壓力更新
-        CurrentPressure.Text = _processController.CurrentPressure.ToString("F2");
-        
-        // 時間更新
-        TimeText.Text = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
-    }
 
-    // ===== 流程控制器事件 =====
-    
-    private void ProcessController_OnStateChanged(ProcessState state, string message)
-    {
-        Dispatcher.Invoke(() =>
-        {
-            // 更新機台狀態顯示
-            MachineStatus.Text = GetStateDisplayName(state);
-            
-            // 更新步驟指示燈
-            UpdateProcessStepIndicator(state);
-            
-            // 更新模式顯示
-            if (state == ProcessState.Idle || state == ProcessState.Complete || state == ProcessState.Error)
-            {
-                AutoModeBorder.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#90A4AE"));
-            }
-            else
-            {
-                AutoModeBorder.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#4CAF50"));
-            }
-        });
-    }
 
     private void ProcessController_OnProcessLog(string message)
     {
@@ -213,6 +184,160 @@ public partial class MainWindow : Window
     }
 
     // ===== 分頁切換 =====
+    private struct ChartDataPoint
+    {
+        public double TimeSeconds; // 相對時間
+        public double Pressure;
+        public double ValveAngle;
+    }
+
+    private readonly List<ChartDataPoint> _chartData = new();
+    private DateTime? _processStartTime;
+
+    private void UpdateTimer_Tick(object? sender, EventArgs e)
+    {
+        // 軸位置更新
+        double valveAngle = _controller.ValvePosition;
+        ValveAngle.Text = valveAngle.ToString("F1"); 
+        ChamberPosition.Text = _controller.PositionZ1.ToString("F1");
+        
+        // 壓力更新
+        double pressure = _processController.CurrentPressure;
+        CurrentPressure.Text = pressure.ToString("F1");
+        
+        if (_processController.CurrentRecipe != null)
+            TargetPressureText.Text = _processController.CurrentRecipe.RoughVacuumTargetPressure.ToString("F0");
+        
+        // 流程時間更新 & 圖表紀錄
+        if (_processController.IsRunning)
+        {
+            if (_processStartTime == null)
+            {
+                _processStartTime = DateTime.Now;
+                _chartData.Clear(); // 新流程開始清空圖表
+            }
+
+            var duration = DateTime.Now - _processStartTime.Value;
+            StepTimeText.Text = duration.ToString(@"mm\:ss");
+
+            // 紀錄數據
+            _chartData.Add(new ChartDataPoint 
+            { 
+                TimeSeconds = duration.TotalSeconds,
+                Pressure = pressure,
+                ValveAngle = valveAngle
+            });
+        }
+        else
+        {
+            StepTimeText.Text = "00:00";
+            _processStartTime = null; // 重置開始時間標記
+        }
+
+        // 時間更新
+        TimeText.Text = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+
+        if (ChartView.Visibility == Visibility.Visible)
+        {
+            DrawChart();
+        }
+    }
+
+    private void DrawChart()
+    {
+        VacuumChartCanvas.Children.Clear();
+        
+        double w = VacuumChartCanvas.ActualWidth;
+        double h = VacuumChartCanvas.ActualHeight;
+        
+        if (w <= 0 || h <= 0 || _chartData.Count < 2) return;
+        
+        // 1. 繪製網格
+        for (int i = 0; i <= 5; i++)
+        {
+            double y = i * h / 5;
+            VacuumChartCanvas.Children.Add(new System.Windows.Shapes.Line
+            {
+                X1 = 0, Y1 = y, X2 = w, Y2 = y,
+                Stroke = Brushes.LightGray, StrokeThickness = 1, StrokeDashArray = new DoubleCollection { 2, 2 }
+            });
+        }
+
+        // 2. 計算 X 軸 Scale (總時間)
+        double maxTime = _chartData.Last().TimeSeconds;
+        if (maxTime < 10) maxTime = 10; // 最小顯示範圍 10秒
+
+        // 3. 繪製壓力曲線 (Blue, 0-102000 Pa) - 這裡簡化用 Linear，實際真空建議用 Log
+        // 為了讓低真空變化明顯，這裡先把 Max 設為 102000，但如果都在低壓區，可以動態調整
+        // 用戶需求是"過程"，通常包含 大氣 -> 真空。
+        double maxPressure = 102000;
+        
+        var pressureLine = new System.Windows.Shapes.Polyline
+        {
+            Stroke = Brushes.DodgerBlue,
+            StrokeThickness = 2
+        };
+
+        // 4. 繪製閥門角度曲線 (Orange, 0-90 度)
+        var valveLine = new System.Windows.Shapes.Polyline
+        {
+            Stroke = Brushes.Orange,
+            StrokeThickness = 2,
+            StrokeDashArray = new DoubleCollection { 4, 2 } // 虛線區分
+        };
+
+        foreach (var p in _chartData)
+        {
+            double x = (p.TimeSeconds / maxTime) * w;
+            
+            // Pressure Y (Linear 0-102000)
+            double py = h - (p.Pressure / maxPressure * h);
+            pressureLine.Points.Add(new Point(x, py < 0 ? 0 : py)); // Clamp
+
+            // Valve Y (0-90)
+            double vy = h - (p.ValveAngle / 90.0 * h);
+            valveLine.Points.Add(new Point(x, vy));
+        }
+        
+        VacuumChartCanvas.Children.Add(pressureLine);
+        VacuumChartCanvas.Children.Add(valveLine);
+
+        // 5. 圖例 (Legend) - 直接畫在 Canvas 上
+        var legendPanel = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(5) };
+        Canvas.SetRight(legendPanel, 10);
+        Canvas.SetTop(legendPanel, 10);
+
+        legendPanel.Children.Add(new TextBlock { Text = "── 壓力 (Pa)", Foreground = Brushes.DodgerBlue, FontWeight = FontWeights.Bold, Margin = new Thickness(0,0,10,0) });
+        legendPanel.Children.Add(new TextBlock { Text = "--- 閥門 (°)", Foreground = Brushes.Orange, FontWeight = FontWeights.Bold });
+        VacuumChartCanvas.Children.Add(legendPanel);
+    }
+
+    // ===== 流程控制器事件 =====
+    
+    private void ProcessController_OnStateChanged(ProcessState state, string message)
+    {
+        Dispatcher.Invoke(() =>
+        {
+            // 更新機台狀態顯示
+            MachineStatus.Text = GetStateDisplayName(state);
+            CurrentStepText.Text = GetStateDisplayName(state);
+            
+            // 更新步驟指示燈
+            UpdateProcessStepIndicator(state);
+            
+            // 更新模式顯示
+            if (state == ProcessState.Idle || state == ProcessState.Complete || state == ProcessState.Error)
+            {
+                AutoModeBorder.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#90A4AE"));
+            }
+            else
+            {
+                AutoModeBorder.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#4CAF50"));
+            }
+        });
+    }
+
+    // ===== 分頁切換 =====
     private void TabMain_Click(object sender, MouseButtonEventArgs e)
     {
         TabMain.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#4CAF50"));
@@ -221,6 +346,9 @@ public partial class MainWindow : Window
         ((TextBlock)TabMain.Child).Foreground = Brushes.White;
         ((TextBlock)TabChart.Child).Foreground = Brushes.Black;
         ((TextBlock)TabAlarm.Child).Foreground = Brushes.Black;
+        
+        MainView.Visibility = Visibility.Visible;
+        ChartView.Visibility = Visibility.Hidden;
     }
 
     private void TabChart_Click(object sender, MouseButtonEventArgs e)
@@ -231,6 +359,10 @@ public partial class MainWindow : Window
         ((TextBlock)TabMain.Child).Foreground = Brushes.Black;
         ((TextBlock)TabChart.Child).Foreground = Brushes.White;
         ((TextBlock)TabAlarm.Child).Foreground = Brushes.Black;
+        
+        MainView.Visibility = Visibility.Hidden;
+        ChartView.Visibility = Visibility.Visible;
+        
         AddLog("切換至圖表頁面");
     }
 
@@ -242,7 +374,12 @@ public partial class MainWindow : Window
         ((TextBlock)TabMain.Child).Foreground = Brushes.Black;
         ((TextBlock)TabChart.Child).Foreground = Brushes.Black;
         ((TextBlock)TabAlarm.Child).Foreground = Brushes.White;
+        
+        MainView.Visibility = Visibility.Hidden;
+        ChartView.Visibility = Visibility.Hidden;
+        
         AddLog("切換至異常頁面");
+        MessageBox.Show("異常歷史功能開發中...", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
     }
 
     // ===== 功能按鈕事件 =====
@@ -256,9 +393,42 @@ public partial class MainWindow : Window
 
     private void Settings_Click(object sender, RoutedEventArgs e)
     {
-        AddLog("開啟設定介面");
-        MessageBox.Show("設定功能\n\n包含:\n• 機台參數設定\n• 材料/塗佈參數", 
-            "設定", MessageBoxButton.OK, MessageBoxImage.Information);
+        // 顯示子選單
+        if (sender is Button button && button.ContextMenu != null)
+        {
+            button.ContextMenu.PlacementTarget = button;
+            button.ContextMenu.IsOpen = true;
+        }
+    }
+
+    private ProcessRecipe _currentRecipe = new();
+    private MachineSettings _machineSettings = new();
+
+    private void RecipeSettings_Click(object sender, RoutedEventArgs e)
+    {
+        AddLog("開啟製程參數設定");
+        var dialog = new RecipeSettingsDialog(_currentRecipe);
+        dialog.Owner = this;
+        if (dialog.ShowDialog() == true)
+        {
+            _currentRecipe = dialog.Recipe;
+            _processController.UpdateRecipe(_currentRecipe);
+            SaveSettings(); // 儲存設定
+            AddLog("製程參數已更新並儲存");
+        }
+    }
+
+    private void MachineSettings_Click(object sender, RoutedEventArgs e)
+    {
+        AddLog("開啟機台參數設定");
+        var dialog = new MachineSettingsDialog(_machineSettings);
+        dialog.Owner = this;
+        if (dialog.ShowDialog() == true)
+        {
+            _machineSettings = dialog.Settings;
+            SaveSettings(); // 儲存設定
+            AddLog("機台參數已更新並儲存");
+        }
     }
 
     private void ManualControl_Click(object sender, RoutedEventArgs e)
@@ -389,8 +559,137 @@ public partial class MainWindow : Window
 
     private void AddLog(string message)
     {
-        ProcessLog.Items.Insert(0, $"[{DateTime.Now:HH:mm:ss}] {message}");
+        string timestamp = DateTime.Now.ToString("HH:mm:ss");
+        string logEntry = $"[{timestamp}] {message}";
+        
+        LogToFile(logEntry); // 寫入檔案
+        
+        ProcessLog.Items.Insert(0, logEntry);
         if (ProcessLog.Items.Count > 100) ProcessLog.Items.RemoveAt(100);
+    }
+
+    // ===== 檔案存取 =====
+
+    private const string DataPath = @"D:\Data\VCD";
+    private const string LogPath = @"D:\Data\VCD\Logs";
+    private const string RecipePath = @"D:\Data\VCD\Recipes";
+    private const string SettingsPath = @"D:\Data\VCD\Settings";
+
+    private void InitStorage()
+    {
+        try
+        {
+            Directory.CreateDirectory(DataPath);
+            Directory.CreateDirectory(LogPath);
+            Directory.CreateDirectory(RecipePath);
+            Directory.CreateDirectory(SettingsPath);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"無法建立資料夾: {ex.Message}", "錯誤", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private void LogToFile(string entry)
+    {
+        try
+        {
+            string filename = Path.Combine(LogPath, $"{DateTime.Now:yyyyMMdd}.log");
+            File.AppendAllText(filename, entry + Environment.NewLine);
+        }
+        catch { /* 忽略日誌寫入錯誤以免影響主流程 */ }
+    }
+
+    private void SaveSettings()
+    {
+        try
+        {
+            var options = new JsonSerializerOptions { WriteIndented = true };
+            
+            // 儲存 Recipe
+            string recipeFile = Path.Combine(RecipePath, "Default.json");
+            string recipeJson = JsonSerializer.Serialize(_currentRecipe, options);
+            File.WriteAllText(recipeFile, recipeJson);
+            
+            // 儲存 MachineSettings
+            string machineFile = Path.Combine(SettingsPath, "Machine.json");
+            string machineJson = JsonSerializer.Serialize(_machineSettings, options);
+            File.WriteAllText(machineFile, machineJson);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"儲存設定失敗: {ex.Message}", "錯誤", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private void LoadSettings()
+    {
+        var options = new JsonSerializerOptions 
+        { 
+            ReadCommentHandling = JsonCommentHandling.Skip,
+            AllowTrailingCommas = true,
+            PropertyNameCaseInsensitive = true
+        };
+
+        // 載入 Recipe
+        string recipeFile = Path.Combine(RecipePath, "Default.json");
+        try
+        {
+            if (File.Exists(recipeFile))
+            {
+                string json = File.ReadAllText(recipeFile);
+                _currentRecipe = JsonSerializer.Deserialize<ProcessRecipe>(json, options) ?? new ProcessRecipe();
+            }
+            else
+            {
+                _currentRecipe = new ProcessRecipe();
+                SaveSettings(); 
+            }
+        }
+        catch (Exception ex)
+        {
+            AddLog($"Recipe 載入失敗: {ex.Message}，已備份並重置。");
+            _currentRecipe = new ProcessRecipe();
+            BackupBadFile(recipeFile);
+            SaveSettings();
+        }
+        _processController.UpdateRecipe(_currentRecipe);
+        
+        // 載入 MachineSettings
+        string machineFile = Path.Combine(SettingsPath, "Machine.json");
+        try
+        {
+            if (File.Exists(machineFile))
+            {
+                string json = File.ReadAllText(machineFile);
+                _machineSettings = JsonSerializer.Deserialize<MachineSettings>(json, options) ?? new MachineSettings();
+            }
+            else
+            {
+                _machineSettings = new MachineSettings();
+                SaveSettings();
+            }
+        }
+        catch (Exception ex)
+        {
+            AddLog($"機台參數載入失敗: {ex.Message}，已備份並重置。");
+            _machineSettings = new MachineSettings();
+            BackupBadFile(machineFile);
+            SaveSettings();
+        }
+    }
+
+    private void BackupBadFile(string filePath)
+    {
+        try 
+        { 
+            if (File.Exists(filePath))
+            {
+                string backupPath = filePath + ".bak." + DateTime.Now.ToString("yyyyMMddHHmmss");
+                File.Move(filePath, backupPath); 
+            }
+        } 
+        catch { }
     }
 
     protected override async void OnClosed(EventArgs e)
@@ -400,7 +699,7 @@ public partial class MainWindow : Window
         {
             await _processController.StopAsync();
         }
-        _motionCard.Dispose();
+        if (_motionCard != null) _motionCard.Dispose();
         base.OnClosed(e);
     }
 }

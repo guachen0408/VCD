@@ -1,6 +1,6 @@
 # VacuumDryer 系統架構圖
 
-> 最後更新: 2026-02-09
+> 最後更新: 2026-02-10
 
 ---
 
@@ -15,13 +15,35 @@ graph TB
     end
     
     subgraph Core["VacuumDryer.Core (核心邏輯)"]
+        subgraph EngineLayer["Engine 通用流程引擎"]
+            PE["ProcessEngine<br/>主迴圈 + DFS"]
+            IPS["IProcessStep<br/>步驟插件介面"]
+            IPC["IProcessContext<br/>環境介面"]
+            PN["ProcessNode<br/>樹節點"]
+            PE --> PN
+            PE --> IPC
+            PN --> IPS
+        end
+        
         subgraph Process["Process 流程控制"]
             VPC["VacuumProcessController<br/>流程控制器"]
-            PS["ProcessState<br/>狀態/參數"]
+            VCtx["VacuumProcessContext<br/>IProcessContext 實作"]
+            PS["ProcessState / Recipe<br/>狀態/參數"]
         end
+        
+        subgraph Steps["Steps 步驟插件"]
+            S1["CloseChamberStep"]
+            S2["RoughVacuumStep"]
+            S3["HighVacuumStep x5"]
+            S4["HoldPressureStep"]
+            S5["VacuumBreakStep"]
+            S6["OpenChamberStep"]
+        end
+        
         subgraph Motion["Motion 運動控制"]
             DZC["DualZController<br/>雙Z軸+蝶閥"]
         end
+        
         subgraph Data["Data 資料"]
             DL["DataLogger<br/>資料記錄"]
         end
@@ -54,9 +76,18 @@ graph TB
     MainWindow --> JogDialog
     JogDialog --> DZC
     
-    VPC --> DZC
-    VPC --> IDigitalIO
-    VPC --> PS
+    VPC --> PE
+    VPC --> VCtx
+    VCtx --> PS
+    VCtx -.-> DZC
+    VCtx -.-> IDigitalIO
+    
+    S1 -.-> IPS
+    S2 -.-> IPS
+    S3 -.-> IPS
+    S4 -.-> IPS
+    S5 -.-> IPS
+    S6 -.-> IPS
     
     DZC --> IAxis
     
@@ -73,101 +104,100 @@ graph TB
 
 ---
 
-## 類別關係圖
+## ProcessEngine 框架架構
 
 ```mermaid
 classDiagram
-    class IMotionCard {
+    class IProcessStep {
         <<interface>>
         +Name: string
-        +IsConnected: bool
-        +InitializeAsync()
-        +GetAxis(axisId)
-        +GetDigitalIO()
-        +EmergencyStopAllAsync()
+        +Description: string
+        +ExecuteAsync(context, ct)
+        +CanExecute(context): bool
     }
     
-    class IAxis {
+    class IProcessContext {
         <<interface>>
-        +Position: double
-        +IsMoving: bool
-        +EnableAsync()
-        +HomeAsync()
-        +MoveAbsoluteAsync()
-        +JogAsync()
-        +StopAsync()
+        +Flags: Dictionary
+        +IsRunning: bool
+        +IsPaused: bool
+        +Log(message)
+        +SetState(state, message)
+        +GetService~T~(): T
+        +ResetFlags()
     }
     
-    class IDigitalIO {
-        <<interface>>
-        +ReadInput()
-        +WriteOutput()
+    class ProcessNode {
+        +Id: string
+        +Step: IProcessStep
+        +StateLabel: string
+        +Children: List
+        +IsCompleted(ctx): bool
+        +MarkComplete(ctx)
+        +AddChild(): ProcessNode
     }
     
-    class DualZController {
-        -_z1Axis: IAxis
-        -_z2Axis: IAxis
-        -_valveAxis: IAxis
-        +MoveSyncAsync()
-        +SetValveAsync()
-        +HomeAllAsync()
+    class ProcessEngine {
+        -_root: ProcessNode
+        -_current: ProcessNode
+        +RunAsync(context): bool
+        +Pause(context)
+        +Resume(context)
+        +Stop(context)
+        +SkipCurrentStep(context)
+        -FindNextStep(): ProcessNode
+    }
+    
+    class VacuumProcessContext {
+        +CurrentPressure: double
+        +Recipe: ProcessRecipe
+        +RegisterService~T~()
     }
     
     class VacuumProcessController {
-        -_motionController: DualZController
-        -_digitalIO: IDigitalIO
-        -_currentState: ProcessState
-        +StartAsync()
-        +Pause()
-        +StopAsync()
-        +OnStateChanged: event
+        -_engine: ProcessEngine
+        -_context: VacuumProcessContext
+        +StartAsync(): bool
+        +BuildDefaultProcessTree()
+        +SetProcessTree(root)
     }
     
-    IMotionCard <|.. SimulatedMotionCard3Axis
-    IMotionCard <|.. DeltaPciL221MotionCard
-    IAxis <|.. SimulatedAxis
-    IAxis <|.. DeltaEtherCatAxis
+    ProcessEngine --> ProcessNode
+    ProcessEngine --> IProcessContext
+    ProcessNode --> IProcessStep
     
-    DualZController --> IAxis
-    VacuumProcessController --> DualZController
-    VacuumProcessController --> IDigitalIO
+    IProcessContext <|.. VacuumProcessContext
+    IProcessStep <|.. CloseChamberStep
+    IProcessStep <|.. RoughVacuumStep
+    IProcessStep <|.. HighVacuumStep
+    IProcessStep <|.. HoldPressureStep
+    IProcessStep <|.. VacuumBreakStep
+    IProcessStep <|.. OpenChamberStep
+    
+    VacuumProcessController --> ProcessEngine
+    VacuumProcessController --> VacuumProcessContext
 ```
 
 ---
 
-## VCD 真空乾燥流程圖
+## 流程樹結構
 
 ```mermaid
 flowchart TD
-    Start([開始]) --> Init[初始化]
-    Init --> CheckHome{已原點復歸?}
-    CheckHome -->|否| Home[執行原點復歸]
-    Home --> CheckHome
-    CheckHome -->|是| Close[1. 關腔<br/>Z軸下降]
+    Root["Root"] --> CC["CloseChamber<br/>關腔"]
+    CC --> RV["RoughVacuum<br/>粗抽"]
+    RV --> HV1["HighVacuum1<br/>細抽 I 蝶閥90°"]
+    HV1 --> HV2["HighVacuum2<br/>細抽 II 蝶閥70°"]
+    HV2 --> HV3["HighVacuum3<br/>細抽 III 蝶閥50°"]
+    HV3 --> HV4["HighVacuum4<br/>細抽 IV 蝶閥30°"]
+    HV4 --> HV5["HighVacuum5<br/>細抽 V 蝶閥10°"]
+    HV5 --> HP["HoldPressure<br/>持壓"]
+    HP --> VB["VacuumBreak<br/>破真空"]
+    VB --> OC["OpenChamber<br/>開腔"]
+    OC --> Done(["Complete"])
     
-    Close --> Rough[2. 粗抽<br/>粗抽閥開啟]
-    Rough --> CheckRough{壓力 < 目標?}
-    CheckRough -->|否| CheckTimeout1{逾時?}
-    CheckTimeout1 -->|否| CheckRough
-    CheckTimeout1 -->|是| Alarm1[異常: 粗抽逾時<br/>-110401]
-    CheckRough -->|是| High1[3. 細抽 I<br/>蝶閥 90°]
-    
-    High1 --> High2[4. 細抽 II<br/>蝶閥 70°]
-    High2 --> High3[5. 細抽 III<br/>蝶閥 50°]
-    High3 --> High4[6. 細抽 IV<br/>蝶閥 30°]
-    High4 --> High5[7. 細抽 V<br/>蝶閥 10°]
-    
-    High5 --> Hold[8. 持壓<br/>維持真空]
-    Hold --> Break[9. 破真空<br/>破真空閥開啟]
-    Break --> Open[10. 開腔<br/>Z軸上升]
-    Open --> Complete([流程完成])
-    
-    Alarm1 --> Error([異常終止])
-    
-    style Start fill:#4CAF50,color:white
-    style Complete fill:#4CAF50,color:white
-    style Error fill:#F44336,color:white
-    style Alarm1 fill:#FF9800,color:white
+    style Root fill:#607D8B,color:white
+    style Done fill:#4CAF50,color:white
 ```
 
 ---
@@ -177,42 +207,38 @@ flowchart TD
 ```mermaid
 sequenceDiagram
     participant UI as MainWindow
-    participant PC as VacuumProcessController
+    participant VPC as VacuumProcessController
+    participant PE as ProcessEngine
+    participant Step as IProcessStep
+    participant Ctx as VacuumProcessContext
     participant DZ as DualZController
-    participant Axis as IAxis
-    participant DLL as EtherCatDll
     participant HW as 控制卡硬體
     
-    UI->>PC: StartAsync()
-    activate PC
+    UI->>VPC: StartAsync()
+    VPC->>PE: RunAsync(context)
+    activate PE
     
-    PC->>PC: SetState(ClosingChamber)
-    PC->>DZ: MoveSyncAsync(300, 100)
-    activate DZ
+    PE->>PE: FindNextStep(root)
+    PE->>Step: ExecuteAsync(context, ct)
+    activate Step
     
-    DZ->>Axis: MoveAbsoluteAsync(300, 100)
-    activate Axis
+    Step->>Ctx: GetService<DualZController>()
+    Ctx-->>Step: DualZController
+    Step->>DZ: MoveSyncAsync(300, 100)
+    DZ->>HW: EtherCAT 封包
+    HW-->>DZ: 完成
+    DZ-->>Step: true
     
-    Axis->>DLL: Ecat_AbsMove(0, 300, 100)
-    DLL->>HW: EtherCAT 封包
-    HW-->>DLL: 完成
-    DLL-->>Axis: 成功
+    deactivate Step
+    Step-->>PE: 完成
+    PE->>PE: MarkComplete(flags["CloseChamber"] = true)
+    PE->>PE: FindNextStep → 下一步
     
-    deactivate Axis
-    Axis-->>DZ: true
-    deactivate DZ
-    DZ-->>PC: true
+    Note over PE: 迴圈直到所有步驟完成
     
-    PC->>PC: SetState(RoughVacuum)
-    PC->>PC: WriteOutput(0, true)
-    Note over PC: 開啟粗抽閥
-    
-    loop 等待壓力降低
-        PC->>PC: 檢查壓力
-    end
-    
-    PC-->>UI: OnStateChanged
-    deactivate PC
+    PE-->>VPC: true
+    deactivate PE
+    VPC-->>UI: OnStateChanged
 ```
 
 ---
@@ -244,7 +270,16 @@ d:\git\VacuumDryer\
 │   ├── Motion\
 │   │   └── DualZController.cs     # 雙Z軸控制器
 │   ├── Process\
-│   │   ├── ProcessState.cs        # 流程狀態/參數
+│   │   ├── Engine\                # 📦 通用流程引擎 (可複用)
+│   │   │   ├── IProcessStep.cs    # 步驟插件介面
+│   │   │   ├── IProcessContext.cs # 環境介面
+│   │   │   ├── ProcessNode.cs     # 樹狀節點
+│   │   │   └── ProcessEngine.cs   # 流程引擎
+│   │   ├── Steps\                 # VacuumDryer 步驟插件
+│   │   │   └── VacuumSteps.cs     # 6 個 IProcessStep
+│   │   ├── ProcessState.cs        # 狀態 enum / Recipe
+│   │   ├── ProcessFlags.cs        # 旗標結構
+│   │   ├── VacuumProcessContext.cs # IProcessContext 實作
 │   │   └── VacuumProcessController.cs  # 流程控制器
 │   └── Data\
 │       └── DataLogger.cs          # 資料記錄

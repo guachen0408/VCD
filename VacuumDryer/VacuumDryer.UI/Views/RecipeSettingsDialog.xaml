@@ -1,0 +1,207 @@
+<Window x:Class="VacuumDryer.UI.Views.RecipeSettingsDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="製程參數設定" 
+        Height="600" Width="500"
+        WindowStartupLocation="CenterOwner"
+        Background="#F5F5F5">
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <TextBlock Text="製程參數設定" FontSize="20" FontWeight="Bold" Margin="0,0,0,10"/>
+
+        <!-- 檔案管理區域 -->
+        <GroupBox Grid.Row="1" Header="Recipe 檔案管理" Margin="0,0,0,10" Padding="5">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Text="選擇檔案:" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                <ComboBox Grid.Column="1" x:Name="RecipeFileComboBox" Margin="0,0,5,0" 
+                          IsEditable="True" StaysOpenOnEdit="True"/>
+                <Button Grid.Column="2" Content="載入" Width="60" Margin="0,0,5,0" Click="LoadRecipe_Click"/>
+                <Button Grid.Column="3" Content="另存新檔" Width="80" Click="SaveAsRecipe_Click"/>
+            </Grid>
+        </GroupBox>
+
+        <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
+            <StackPanel>
+                <!-- 粗抽參數 -->
+                <GroupBox Header="粗抽參數" Margin="0,0,0,10" Padding="10">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="120"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="50"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="35"/>
+                            <RowDefinition Height="35"/>
+                        </Grid.RowDefinitions>
+                        
+                        <TextBlock Text="目標壓力" VerticalAlignment="Center"/>
+                        <TextBox x:Name="RoughVacuumPressure" Grid.Column="1" Height="25" Text="{Binding RoughVacuumTargetPressure}"/>
+                        <TextBlock Grid.Column="2" Text="Pa" VerticalAlignment="Center" Margin="5,0"/>
+                        
+                        <TextBlock Grid.Row="1" Text="逾時時間" VerticalAlignment="Center"/>
+                        <TextBox x:Name="RoughVacuumTimeout" Grid.Row="1" Grid.Column="1" Height="25" Text="{Binding RoughVacuumTimeout}"/>
+                        <TextBlock Grid.Row="1" Grid.Column="2" Text="秒" VerticalAlignment="Center" Margin="5,0"/>
+                    </Grid>
+                </GroupBox>
+                
+                <!-- 細抽五段參數 -->
+                <GroupBox Header="細抽參數 (五段)" Margin="0,0,0,10" Padding="10">
+                    <StackPanel>
+                        <!-- 表頭 -->
+                        <Grid Margin="0,0,0,5">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="60"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="段數" FontWeight="Bold"/>
+                            <TextBlock Grid.Column="1" Text="蝶閥角度(°)" FontWeight="Bold"/>
+                            <TextBlock Grid.Column="2" Text="持續時間(秒)" FontWeight="Bold"/>
+                            <TextBlock Grid.Column="3" Text="目標壓力(Pa)" FontWeight="Bold"/>
+                        </Grid>
+                        
+                        <!-- 第一段 -->
+                        <Grid Margin="0,3">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="60"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="第一段" VerticalAlignment="Center"/>
+                            <TextBox x:Name="Stage1Angle" Grid.Column="1" Height="25" Margin="0,0,5,0" Text="{Binding HighVacuumStages[0].ValveAngle}"/>
+                            <TextBox x:Name="Stage1Duration" Grid.Column="2" Height="25" Margin="0,0,5,0" Text="{Binding HighVacuumStages[0].Duration}"/>
+                            <TextBox x:Name="Stage1Pressure" Grid.Column="3" Height="25" Text="{Binding HighVacuumStages[0].TargetPressure}"/>
+                        </Grid>
+                        
+                        <!-- 第二段 -->
+                        <Grid Margin="0,3">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="60"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="第二段" VerticalAlignment="Center"/>
+                            <TextBox x:Name="Stage2Angle" Grid.Column="1" Height="25" Margin="0,0,5,0" Text="{Binding HighVacuumStages[1].ValveAngle}"/>
+                            <TextBox x:Name="Stage2Duration" Grid.Column="2" Height="25" Margin="0,0,5,0" Text="{Binding HighVacuumStages[1].Duration}"/>
+                            <TextBox x:Name="Stage2Pressure" Grid.Column="3" Height="25" Text="{Binding HighVacuumStages[1].TargetPressure}"/>
+                        </Grid>
+                        
+                        <!-- 第三段 -->
+                        <Grid Margin="0,3">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="60"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="第三段" VerticalAlignment="Center"/>
+                            <TextBox x:Name="Stage3Angle" Grid.Column="1" Height="25" Margin="0,0,5,0" Text="{Binding HighVacuumStages[2].ValveAngle}"/>
+                            <TextBox x:Name="Stage3Duration" Grid.Column="2" Height="25" Margin="0,0,5,0" Text="{Binding HighVacuumStages[2].Duration}"/>
+                            <TextBox x:Name="Stage3Pressure" Grid.Column="3" Height="25" Text="{Binding HighVacuumStages[2].TargetPressure}"/>
+                        </Grid>
+                        
+                        <!-- 第四段 -->
+                        <Grid Margin="0,3">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="60"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="第四段" VerticalAlignment="Center"/>
+                            <TextBox x:Name="Stage4Angle" Grid.Column="1" Height="25" Margin="0,0,5,0" Text="{Binding HighVacuumStages[3].ValveAngle}"/>
+                            <TextBox x:Name="Stage4Duration" Grid.Column="2" Height="25" Margin="0,0,5,0" Text="{Binding HighVacuumStages[3].Duration}"/>
+                            <TextBox x:Name="Stage4Pressure" Grid.Column="3" Height="25" Text="{Binding HighVacuumStages[3].TargetPressure}"/>
+                        </Grid>
+                        
+                        <!-- 第五段 -->
+                        <Grid Margin="0,3">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="60"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="第五段" VerticalAlignment="Center"/>
+                            <TextBox x:Name="Stage5Angle" Grid.Column="1" Height="25" Margin="0,0,5,0" Text="{Binding HighVacuumStages[4].ValveAngle}"/>
+                            <TextBox x:Name="Stage5Duration" Grid.Column="2" Height="25" Margin="0,0,5,0" Text="{Binding HighVacuumStages[4].Duration}"/>
+                            <TextBox x:Name="Stage5Pressure" Grid.Column="3" Height="25" Text="{Binding HighVacuumStages[4].TargetPressure}"/>
+                        </Grid>
+                    </StackPanel>
+                </GroupBox>
+                
+                <!-- 持壓參數 -->
+                <GroupBox Header="持壓參數" Margin="0,0,0,10" Padding="10">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="120"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="50"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="35"/>
+                            <RowDefinition Height="35"/>
+                        </Grid.RowDefinitions>
+                        
+                        <TextBlock Text="持壓時間" VerticalAlignment="Center"/>
+                        <TextBox x:Name="HoldDuration" Grid.Column="1" Height="25" Text="{Binding HoldPressureDuration}"/>
+                        <TextBlock Grid.Column="2" Text="秒" VerticalAlignment="Center" Margin="5,0"/>
+                        
+                        <TextBlock Grid.Row="1" Text="目標壓力" VerticalAlignment="Center"/>
+                        <TextBox x:Name="HoldPressure" Grid.Row="1" Grid.Column="1" Height="25" Text="{Binding HoldPressureTarget}"/>
+                        <TextBlock Grid.Row="1" Grid.Column="2" Text="Pa" VerticalAlignment="Center" Margin="5,0"/>
+                    </Grid>
+                </GroupBox>
+                
+                <!-- 破真空參數 -->
+                <GroupBox Header="破真空參數" Margin="0,0,0,10" Padding="10">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="120"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="50"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="35"/>
+                            <RowDefinition Height="35"/>
+                        </Grid.RowDefinitions>
+                        
+                        <TextBlock Text="小閥逾時" VerticalAlignment="Center"/>
+                        <TextBox x:Name="SmallValveTimeout" Grid.Column="1" Height="25" Text="{Binding VacuumBreakSmallValveTimeout}"/>
+                        <TextBlock Grid.Column="2" Text="秒" VerticalAlignment="Center" Margin="5,0"/>
+                        
+                        <TextBlock Grid.Row="1" Text="總逾時時間" VerticalAlignment="Center"/>
+                        <TextBox x:Name="VacuumBreakTimeout" Grid.Row="1" Grid.Column="1" Height="25" Text="{Binding VacuumBreakTimeout}"/>
+                        <TextBlock Grid.Row="1" Grid.Column="2" Text="秒" VerticalAlignment="Center" Margin="5,0"/>
+                    </Grid>
+                </GroupBox>
+            </StackPanel>
+        </ScrollViewer>
+        
+        <!-- 按鈕 -->
+        <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,15,0,0">
+            <Button Content="儲存" Width="80" Height="35" Margin="0,0,10,0" 
+                    Background="#4CAF50" Foreground="White" BorderThickness="0"
+                    Click="Save_Click"/>
+            <Button Content="取消" Width="80" Height="35" 
+                    Background="#9E9E9E" Foreground="White" BorderThickness="0"
+                    Click="Cancel_Click"/>
+        </StackPanel>
+    </Grid>
+</Window>

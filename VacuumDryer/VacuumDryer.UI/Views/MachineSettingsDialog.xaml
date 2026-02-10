@@ -1,0 +1,167 @@
+<Window x:Class="VacuumDryer.UI.Views.MachineSettingsDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="機台參數設定" 
+        Height="600" Width="450"
+        WindowStartupLocation="CenterOwner"
+        Background="#F5F5F5">
+    <Grid Margin="15">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <TextBlock Text="機台參數設定" FontSize="20" FontWeight="Bold" Margin="0,0,0,10"/>
+
+        <!-- 檔案管理區域 -->
+        <GroupBox Grid.Row="1" Header="Machine 檔案管理" Margin="0,0,0,10" Padding="5">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Text="選擇檔案:" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                <ComboBox Grid.Column="1" x:Name="SettingsFileComboBox" Margin="0,0,5,0" 
+                          IsEditable="True" StaysOpenOnEdit="True"/>
+                <Button Grid.Column="2" Content="載入" Width="60" Margin="0,0,5,0" Click="LoadSettings_Click"/>
+                <Button Grid.Column="3" Content="另存" Width="60" Click="SaveAsSettings_Click"/>
+            </Grid>
+        </GroupBox>
+        
+        <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
+            <StackPanel>
+                <!-- Z軸參數 -->
+                <GroupBox Header="Z軸參數" Margin="0,0,0,10" Padding="10">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="120"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="60"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="35"/>
+                            <RowDefinition Height="35"/>
+                            <RowDefinition Height="35"/>
+                            <RowDefinition Height="35"/>
+                            <RowDefinition Height="35"/>
+                        </Grid.RowDefinitions>
+                        
+                        <TextBlock Text="開腔位置" VerticalAlignment="Center"/>
+                        <TextBox x:Name="OpenPosition" Grid.Column="1" Height="25" Text="{Binding OpenPosition}"/>
+                        <TextBlock Grid.Column="2" Text="mm" VerticalAlignment="Center" Margin="5,0"/>
+                        
+                        <TextBlock Grid.Row="1" Text="減速位置" VerticalAlignment="Center"/>
+                        <TextBox x:Name="SlowdownPosition" Grid.Row="1" Grid.Column="1" Height="25" Text="{Binding SlowdownPosition}"/>
+                        <TextBlock Grid.Row="1" Grid.Column="2" Text="mm" VerticalAlignment="Center" Margin="5,0"/>
+                        
+                        <TextBlock Grid.Row="2" Text="關腔位置" VerticalAlignment="Center"/>
+                        <TextBox x:Name="ClosePosition" Grid.Row="2" Grid.Column="1" Height="25" Text="{Binding ClosePosition}"/>
+                        <TextBlock Grid.Row="2" Grid.Column="2" Text="mm" VerticalAlignment="Center" Margin="5,0"/>
+                        
+                        <TextBlock Grid.Row="3" Text="快速移動速度" VerticalAlignment="Center"/>
+                        <TextBox x:Name="FastSpeed" Grid.Row="3" Grid.Column="1" Height="25" Text="{Binding FastSpeed}"/>
+                        <TextBlock Grid.Row="3" Grid.Column="2" Text="mm/s" VerticalAlignment="Center" Margin="5,0"/>
+                        
+                        <TextBlock Grid.Row="4" Text="慢速移動速度" VerticalAlignment="Center"/>
+                        <TextBox x:Name="SlowSpeed" Grid.Row="4" Grid.Column="1" Height="25" Text="{Binding SlowSpeed}"/>
+                        <TextBlock Grid.Row="4" Grid.Column="2" Text="mm/s" VerticalAlignment="Center" Margin="5,0"/>
+                    </Grid>
+                </GroupBox>
+                
+                <!-- 蝶閥參數 -->
+                <GroupBox Header="蝶閥參數" Margin="0,0,0,10" Padding="10">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="120"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="60"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="35"/>
+                            <RowDefinition Height="35"/>
+                        </Grid.RowDefinitions>
+                        
+                        <TextBlock Text="蝶閥速度" VerticalAlignment="Center"/>
+                        <TextBox x:Name="ValveSpeed" Grid.Column="1" Height="25" Text="{Binding ValveSpeed}"/>
+                        <TextBlock Grid.Column="2" Text="°/s" VerticalAlignment="Center" Margin="5,0"/>
+                        
+                        <TextBlock Grid.Row="1" Text="全開角度" VerticalAlignment="Center"/>
+                        <TextBox x:Name="ValveFullOpen" Grid.Row="1" Grid.Column="1" Height="25" Text="{Binding ValveFullOpen}"/>
+                        <TextBlock Grid.Row="1" Grid.Column="2" Text="°" VerticalAlignment="Center" Margin="5,0"/>
+                    </Grid>
+                </GroupBox>
+                
+                <!-- 運動控制參數 -->
+                <GroupBox Header="運動控制參數" Margin="0,0,0,10" Padding="10">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="120"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="60"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="35"/>
+                            <RowDefinition Height="35"/>
+                            <RowDefinition Height="35"/>
+                        </Grid.RowDefinitions>
+                        
+                        <TextBlock Text="加速度" VerticalAlignment="Center"/>
+                        <TextBox x:Name="Acceleration" Grid.Column="1" Height="25" Text="{Binding Acceleration}"/>
+                        <TextBlock Grid.Column="2" Text="mm/s²" VerticalAlignment="Center" Margin="5,0"/>
+                        
+                        <TextBlock Grid.Row="1" Text="減速度" VerticalAlignment="Center"/>
+                        <TextBox x:Name="Deceleration" Grid.Row="1" Grid.Column="1" Height="25" Text="{Binding Deceleration}"/>
+                        <TextBlock Grid.Row="1" Grid.Column="2" Text="mm/s²" VerticalAlignment="Center" Margin="5,0"/>
+                        
+                        <TextBlock Grid.Row="2" Text="同步誤差容許" VerticalAlignment="Center"/>
+                        <TextBox x:Name="SyncTolerance" Grid.Row="2" Grid.Column="1" Height="25" Text="{Binding SyncTolerance}"/>
+                        <TextBlock Grid.Row="2" Grid.Column="2" Text="mm" VerticalAlignment="Center" Margin="5,0"/>
+                    </Grid>
+                </GroupBox>
+                
+                <!-- IO 通道 -->
+                <GroupBox Header="DO 通道設定" Margin="0,0,0,10" Padding="10">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="120"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="35"/>
+                            <RowDefinition Height="35"/>
+                            <RowDefinition Height="35"/>
+                            <RowDefinition Height="35"/>
+                        </Grid.RowDefinitions>
+                        
+                        <TextBlock Text="粗抽閥" VerticalAlignment="Center"/>
+                        <TextBox x:Name="RoughValveDO" Grid.Column="1" Height="25" Text="{Binding RoughValveDO}"/>
+                        
+                        <TextBlock Grid.Row="1" Text="細抽閥" VerticalAlignment="Center"/>
+                        <TextBox x:Name="HighValveDO" Grid.Row="1" Grid.Column="1" Height="25" Text="{Binding HighValveDO}"/>
+                        
+                        <TextBlock Grid.Row="2" Text="破真空小閥" VerticalAlignment="Center"/>
+                        <TextBox x:Name="SmallBreakValveDO" Grid.Row="2" Grid.Column="1" Height="25" Text="{Binding SmallBreakValveDO}"/>
+                        
+                        <TextBlock Grid.Row="3" Text="破真空大閥" VerticalAlignment="Center"/>
+                        <TextBox x:Name="LargeBreakValveDO" Grid.Row="3" Grid.Column="1" Height="25" Text="{Binding LargeBreakValveDO}"/>
+                    </Grid>
+                </GroupBox>
+            </StackPanel>
+        </ScrollViewer>
+        
+        <!-- 按鈕 -->
+        <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,15,0,0">
+            <Button Content="儲存" Width="80" Height="35" Margin="0,0,10,0" 
+                    Background="#4CAF50" Foreground="White" BorderThickness="0"
+                    Click="Save_Click"/>
+            <Button Content="取消" Width="80" Height="35" 
+                    Background="#9E9E9E" Foreground="White" BorderThickness="0"
+                    Click="Cancel_Click"/>
+        </StackPanel>
+    </Grid>
+</Window>
+

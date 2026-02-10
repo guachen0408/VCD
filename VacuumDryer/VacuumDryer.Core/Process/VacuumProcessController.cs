@@ -1,33 +1,30 @@
 using VacuumDryer.Core.Motion;
+using VacuumDryer.Core.Process.Engine;
+using VacuumDryer.Core.Process.Steps;
 using VacuumDryer.Hardware;
 
 namespace VacuumDryer.Core.Process;
 
 /// <summary>
 /// VCD 真空乾燥流程控制器
-/// 參考 T23Y043 VCD 軟體操作手冊
+/// 使用通用 ProcessEngine 框架，以插件方式註冊步驟
 /// </summary>
 public class VacuumProcessController
 {
-    private readonly DualZController _motionController;
-    private readonly IDigitalIO? _digitalIO;
+    private readonly ProcessEngine _engine = new();
+    private readonly VacuumProcessContext _context = new();
     
     private ProcessState _currentState = ProcessState.Idle;
-    private ProcessRecipe _recipe = new();
-    private CancellationTokenSource? _processCts;
-    private DateTime _stageStartTime;
-    private int _currentHighVacuumStage = 0;
-    
-    // 模擬壓力值 (實機需從感測器讀取)
-    private double _currentPressure = 101325; // 大氣壓 Pa
     
     public ProcessState CurrentState => _currentState;
-    public ProcessRecipe CurrentRecipe => _recipe;
-    public double CurrentPressure => _currentPressure;
-    public int CurrentHighVacuumStage => _currentHighVacuumStage;
-    public bool IsRunning => _currentState != ProcessState.Idle && 
-                             _currentState != ProcessState.Complete && 
-                             _currentState != ProcessState.Error;
+    public ProcessRecipe CurrentRecipe => _context.Recipe;
+    public double CurrentPressure => _context.CurrentPressure;
+    public int CurrentHighVacuumStage => _context.CurrentHighVacuumStage;
+    public bool IsRunning => _context.IsRunning;
+    public bool IsPaused => _context.IsPaused;
+    public DateTime StageStartTime => _context.StageStartTime;
+    public VacuumProcessContext Context => _context;
+    public ProcessEngine Engine => _engine;
     
     public event Action<ProcessState, string>? OnStateChanged;
     public event Action<string>? OnProcessLog;
@@ -35,14 +32,48 @@ public class VacuumProcessController
 
     public VacuumProcessController(DualZController motionController, IDigitalIO? digitalIO = null)
     {
-        _motionController = motionController;
-        _digitalIO = digitalIO;
+        // 註冊服務到 Context
+        _context.RegisterService(motionController);
+        if (digitalIO != null)
+        {
+            _context.RegisterService(digitalIO);
+        }
+        
+        // 綁定 Context 事件
+        _context.OnStateChanged += (state, msg) => 
+        {
+            _currentState = ParseState(state);
+            OnStateChanged?.Invoke(_currentState, msg);
+        };
+        _context.OnLog += msg => OnProcessLog?.Invoke(msg);
+        _context.OnAlarm += (code, msg) => OnAlarm?.Invoke(code, msg);
+        
+        // 綁定 Engine 事件
+        _engine.OnLog += msg => OnProcessLog?.Invoke(msg);
+        _engine.OnStateChanged += (state, msg) =>
+        {
+            _currentState = ParseState(state);
+            OnStateChanged?.Invoke(_currentState, msg);
+        };
+        
+        // 建立預設流程樹
+        _engine.SetProcessTree(BuildDefaultProcessTree());
     }
 
     public void LoadRecipe(ProcessRecipe recipe)
     {
-        _recipe = recipe;
-        Log($"載入製程: {recipe.Name}");
+        _context.Recipe = recipe;
+        _context.Log($"載入製程: {recipe.Name}");
+    }
+
+    public void UpdateRecipe(ProcessRecipe recipe)
+    {
+        if (IsRunning)
+        {
+            _context.Log("⚠️ 流程運行中，部分參數可能在下一週期生效");
+        }
+        _context.Recipe = recipe;
+        _context.Log("製程參數已更新");
     }
 
     /// <summary>
@@ -50,279 +81,82 @@ public class VacuumProcessController
     /// </summary>
     public async Task<bool> StartAsync()
     {
-        if (IsRunning) return false;
-        
-        _processCts = new CancellationTokenSource();
-        
-        try
-        {
-            Log("開始自動流程");
-            
-            // 1. 關腔
-            await CloseChamberAsync(_processCts.Token);
-            
-            // 2. 粗抽
-            await RoughVacuumAsync(_processCts.Token);
-            
-            // 3. 細抽五段
-            for (int i = 0; i < 5; i++)
-            {
-                await HighVacuumStageAsync(i, _processCts.Token);
-            }
-            
-            // 4. 持壓
-            await HoldPressureAsync(_processCts.Token);
-            
-            // 5. 破真空
-            await VacuumBreakAsync(_processCts.Token);
-            
-            // 6. 開腔
-            await OpenChamberAsync(_processCts.Token);
-            
-            SetState(ProcessState.Complete, "流程完成");
-            return true;
-        }
-        catch (OperationCanceledException)
-        {
-            Log("流程已取消");
-            return false;
-        }
-        catch (Exception ex)
-        {
-            SetState(ProcessState.Error, $"流程異常: {ex.Message}");
-            RaiseAlarm(-1, ex.Message);
-            return false;
-        }
+        _context.CurrentPressure = 101325;
+        return await _engine.RunAsync(_context);
     }
 
-    /// <summary>
-    /// 暫停流程
-    /// </summary>
-    public void Pause()
-    {
-        if (IsRunning && _currentState != ProcessState.Paused)
-        {
-            SetState(ProcessState.Paused, "流程暫停");
-        }
-    }
+    /// <summary>暫停流程</summary>
+    public void Pause() => _engine.Pause(_context);
 
-    /// <summary>
-    /// 繼續流程
-    /// </summary>
-    public void Resume()
-    {
-        if (_currentState == ProcessState.Paused)
-        {
-            Log("流程繼續");
-        }
-    }
+    /// <summary>繼續流程</summary>
+    public void Resume() => _engine.Resume(_context);
 
-    /// <summary>
-    /// 停止流程
-    /// </summary>
+    /// <summary>停止流程</summary>
     public async Task StopAsync()
     {
-        _processCts?.Cancel();
-        await _motionController.EmergencyStopAsync();
-        SetState(ProcessState.Idle, "流程停止");
-    }
-
-    // ===== 流程步驟 =====
-
-    private async Task CloseChamberAsync(CancellationToken ct)
-    {
-        SetState(ProcessState.ClosingChamber, "關腔中...");
-        
-        // 移動到減速位置
-        await _motionController.MoveSyncAsync(_recipe.ChamberSlowdownPosition, 100, ct);
-        
-        // 低速移動到關腔位置
-        await _motionController.MoveSyncAsync(_recipe.ChamberClosePosition, 20, ct);
-        
-        Log($"關腔完成，位置: {_motionController.PositionZ1:F2} mm");
-    }
-
-    private async Task OpenChamberAsync(CancellationToken ct)
-    {
-        SetState(ProcessState.OpeningChamber, "開腔中...");
-        
-        // 移動到開腔位置
-        await _motionController.MoveSyncAsync(_recipe.ChamberOpenPosition, 100, ct);
-        
-        Log($"開腔完成，位置: {_motionController.PositionZ1:F2} mm");
-    }
-
-    private async Task RoughVacuumAsync(CancellationToken ct)
-    {
-        SetState(ProcessState.RoughVacuum, "粗抽中...");
-        _stageStartTime = DateTime.Now;
-        
-        // 開啟粗抽閥 (DO)
-        _digitalIO?.WriteOutput(0, true);  // 粗抽閥
-        
-        // 等待壓力達標或逾時
-        while (_currentPressure > _recipe.RoughVacuumTargetPressure)
+        _engine.Stop(_context);
+        var motion = _context.GetService<DualZController>();
+        if (motion != null)
         {
-            ct.ThrowIfCancellationRequested();
-            await WaitIfPaused(ct);
-            
-            // 模擬壓力下降
-            _currentPressure *= 0.9;
-            
-            // 檢查逾時
-            if ((DateTime.Now - _stageStartTime).TotalSeconds > _recipe.RoughVacuumTimeout)
-            {
-                RaiseAlarm(-110401, "粗抽逾時!!");
-                throw new TimeoutException("粗抽逾時");
-            }
-            
-            await Task.Delay(500, ct);
+            await motion.EmergencyStopAsync();
         }
-        
-        // 關閉粗抽閥
-        _digitalIO?.WriteOutput(0, false);
-        
-        Log($"粗抽完成，壓力: {_currentPressure:F2} Pa");
+        _currentState = ProcessState.Idle;
     }
 
-    private async Task HighVacuumStageAsync(int stageIndex, CancellationToken ct)
+    /// <summary>
+    /// 設定自訂流程樹 (可外部重組流程順序)
+    /// </summary>
+    public void SetProcessTree(ProcessNode root)
     {
-        _currentHighVacuumStage = stageIndex + 1;
-        var stage = _recipe.HighVacuumStages[stageIndex];
+        _engine.SetProcessTree(root);
+    }
+
+    /// <summary>
+    /// 建立預設流程樹 (VacuumDryer 標準流程)
+    /// </summary>
+    public ProcessNode BuildDefaultProcessTree()
+    {
+        var root = new ProcessNode { Id = "Root" };
         
-        var stateName = stageIndex switch
+        // 使用 Fluent API 建立樹
+        var closeChamber = root.AddChild("CloseChamber", new CloseChamberStep(), "ClosingChamber", "關腔中...");
+        var roughVacuum = closeChamber.AddChild("RoughVacuum", new RoughVacuumStep(), "RoughVacuum", "粗抽中...");
+        
+        var highVac1 = roughVacuum.AddChild("HighVacuum1", new HighVacuumStep(0), "HighVacuumStage1", "細抽第1段...");
+        var highVac2 = highVac1.AddChild("HighVacuum2", new HighVacuumStep(1), "HighVacuumStage2", "細抽第2段...");
+        var highVac3 = highVac2.AddChild("HighVacuum3", new HighVacuumStep(2), "HighVacuumStage3", "細抽第3段...");
+        var highVac4 = highVac3.AddChild("HighVacuum4", new HighVacuumStep(3), "HighVacuumStage4", "細抽第4段...");
+        var highVac5 = highVac4.AddChild("HighVacuum5", new HighVacuumStep(4), "HighVacuumStage5", "細抽第5段...");
+        
+        var holdPressure = highVac5.AddChild("HoldPressure", new HoldPressureStep(), "HoldPressure", "持壓中...");
+        var vacuumBreak = holdPressure.AddChild("VacuumBreak", new VacuumBreakStep(), "VacuumBreak", "破真空中...");
+        vacuumBreak.AddChild("OpenChamber", new OpenChamberStep(), "OpeningChamber", "開腔中...");
+        
+        return root;
+    }
+    
+    /// <summary>
+    /// 將字串狀態轉換為 ProcessState enum (向後相容)
+    /// </summary>
+    private static ProcessState ParseState(string state)
+    {
+        return state switch
         {
-            0 => ProcessState.HighVacuumStage1,
-            1 => ProcessState.HighVacuumStage2,
-            2 => ProcessState.HighVacuumStage3,
-            3 => ProcessState.HighVacuumStage4,
-            _ => ProcessState.HighVacuumStage5
+            "Idle" => ProcessState.Idle,
+            "ClosingChamber" => ProcessState.ClosingChamber,
+            "OpeningChamber" => ProcessState.OpeningChamber,
+            "RoughVacuum" => ProcessState.RoughVacuum,
+            "HighVacuumStage1" => ProcessState.HighVacuumStage1,
+            "HighVacuumStage2" => ProcessState.HighVacuumStage2,
+            "HighVacuumStage3" => ProcessState.HighVacuumStage3,
+            "HighVacuumStage4" => ProcessState.HighVacuumStage4,
+            "HighVacuumStage5" => ProcessState.HighVacuumStage5,
+            "HoldPressure" => ProcessState.HoldPressure,
+            "VacuumBreak" => ProcessState.VacuumBreak,
+            "Complete" => ProcessState.Complete,
+            "Error" => ProcessState.Error,
+            "Paused" => ProcessState.Paused,
+            _ => ProcessState.Idle
         };
-        
-        SetState(stateName, $"細抽第 {stageIndex + 1} 段...");
-        _stageStartTime = DateTime.Now;
-        
-        // 開啟細抽閥
-        _digitalIO?.WriteOutput(1, true);  // 細抽閥
-        
-        // 設定蝶閥角度
-        await _motionController.SetValveAsync(stage.ValveAngle, 30);
-        Log($"蝶閥角度設定: {stage.ValveAngle}°");
-        
-        // 等待壓力達標或持續時間結束
-        var endTime = DateTime.Now.AddSeconds(stage.Duration);
-        while (DateTime.Now < endTime && _currentPressure > stage.StartPressure)
-        {
-            ct.ThrowIfCancellationRequested();
-            await WaitIfPaused(ct);
-            
-            // 模擬壓力下降
-            _currentPressure *= 0.95;
-            
-            // 檢查逾時
-            if ((DateTime.Now - _stageStartTime).TotalSeconds > stage.Timeout)
-            {
-                RaiseAlarm(-110403 - stageIndex, $"細抽第{stageIndex + 1}段逾時!!");
-                throw new TimeoutException($"細抽第{stageIndex + 1}段逾時");
-            }
-            
-            await Task.Delay(500, ct);
-        }
-        
-        Log($"細抽第 {stageIndex + 1} 段完成，壓力: {_currentPressure:F4} Pa");
-    }
-
-    private async Task HoldPressureAsync(CancellationToken ct)
-    {
-        SetState(ProcessState.HoldPressure, "持壓中...");
-        
-        var endTime = DateTime.Now.AddSeconds(_recipe.HoldPressureDuration);
-        while (DateTime.Now < endTime)
-        {
-            ct.ThrowIfCancellationRequested();
-            await WaitIfPaused(ct);
-            await Task.Delay(500, ct);
-        }
-        
-        Log($"持壓完成，持續 {_recipe.HoldPressureDuration} 秒");
-    }
-
-    private async Task VacuumBreakAsync(CancellationToken ct)
-    {
-        SetState(ProcessState.VacuumBreak, "破真空中...");
-        _stageStartTime = DateTime.Now;
-        
-        // 關閉細抽閥
-        _digitalIO?.WriteOutput(1, false);
-        
-        // 開啟破真空小閥
-        _digitalIO?.WriteOutput(2, true);
-        
-        // 等待壓力上升
-        while (_currentPressure < 50000)  // 500 mbar
-        {
-            ct.ThrowIfCancellationRequested();
-            _currentPressure *= 1.5;
-            
-            if ((DateTime.Now - _stageStartTime).TotalSeconds > _recipe.VacuumBreakSmallTimeout)
-            {
-                // 開啟破真空大閥
-                _digitalIO?.WriteOutput(3, true);
-                break;
-            }
-            
-            await Task.Delay(500, ct);
-        }
-        
-        // 等待壓力接近大氣壓
-        while (_currentPressure < 90000)
-        {
-            ct.ThrowIfCancellationRequested();
-            _currentPressure *= 1.2;
-            
-            if ((DateTime.Now - _stageStartTime).TotalSeconds > _recipe.VacuumBreakLargeTimeout)
-            {
-                RaiseAlarm(-110503, "破真空大逾時!!");
-                throw new TimeoutException("破真空大逾時");
-            }
-            
-            await Task.Delay(500, ct);
-        }
-        
-        // 關閉所有破真空閥
-        _digitalIO?.WriteOutput(2, false);
-        _digitalIO?.WriteOutput(3, false);
-        
-        _currentPressure = 101325;
-        Log("破真空完成");
-    }
-
-    // ===== 輔助方法 =====
-
-    private async Task WaitIfPaused(CancellationToken ct)
-    {
-        while (_currentState == ProcessState.Paused)
-        {
-            ct.ThrowIfCancellationRequested();
-            await Task.Delay(100, ct);
-        }
-    }
-
-    private void SetState(ProcessState state, string message)
-    {
-        _currentState = state;
-        Log(message);
-        OnStateChanged?.Invoke(state, message);
-    }
-
-    private void Log(string message)
-    {
-        OnProcessLog?.Invoke($"[{DateTime.Now:HH:mm:ss}] {message}");
-    }
-
-    private void RaiseAlarm(int code, string message)
-    {
-        OnAlarm?.Invoke(code, message);
-        Log($"⚠️ 異常 {code}: {message}");
     }
 }
