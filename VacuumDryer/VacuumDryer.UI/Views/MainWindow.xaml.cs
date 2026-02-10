@@ -393,14 +393,14 @@ public partial class MainWindow : Window
         if (dialog.ShowDialog() == true)
         {
             var user = _authManager.CurrentUser!;
-            UserLevel.Text = $"  {(int)user.Role}";
+            UserLevel.Text = $"  Lv.{(int)user.Role}";
             AddLog($"使用者 {user.Username} 已登入 (權限: {user.Role})");
         }
         
         // 訂閱登出事件更新 UI
         _authManager.OnLogout += () => Dispatcher.Invoke(() =>
         {
-            UserLevel.Text = "  0";
+            UserLevel.Text = "  Lv.0";
             AddLog("使用者已登出");
         });
     }

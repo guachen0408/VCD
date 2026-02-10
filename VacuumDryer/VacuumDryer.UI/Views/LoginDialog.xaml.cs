@@ -21,6 +21,9 @@ public partial class LoginDialog : Window
         
         // 聚焦帳號欄位
         Loaded += (_, _) => UsernameBox.Focus();
+        
+        // 允許拖曳視窗
+        MouseLeftButtonDown += (_, _) => DragMove();
     }
     
     private void Login_Click(object sender, RoutedEventArgs e)
@@ -37,6 +40,12 @@ public partial class LoginDialog : Window
         UsernameBox.Text = "";
         PasswordBox.Password = "";
         UsernameBox.Focus();
+    }
+    
+    private void CloseX_MouseDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        DialogResult = LoginSuccess;
+        Close();
     }
     
     private void Close_Click(object sender, RoutedEventArgs e)
